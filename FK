@@ -198,3 +198,4 @@ T_simplified = sp.simplify(T)
 print("Simplified Overall Transformation Matrix (Base to End-Effector):")
 sp.pprint(T_simplified, num_columns = 250, wrap_line = False)
 print(T_dumb)
+
