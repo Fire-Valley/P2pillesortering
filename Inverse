@@ -1,0 +1,67 @@
+import numpy as np
+from scipy.optimize import minimize
+
+# Define the forward kinematics function
+def forward_kinematics(theta_values, L):
+    theta1, theta2, theta3, theta4, theta5, theta6 = theta_values
+    T = np.eye(4)
+    dh_params = [
+        {'theta': theta1, 'd': L['world']['l'], 'a': 0, 'alpha': 0},
+        {'theta': theta2 - np.pi / 2, 'd': 0, 'a': L['base']['l'], 'alpha': -np.pi / 2},
+        {'theta': theta3, 'd': 0, 'a': L['lower_arm']['l'], 'alpha': 0},
+        {'theta': theta4, 'd': 0, 'a': L['elbow']['l'], 'alpha': -np.pi / 2},
+        {'theta': theta5, 'd': 0, 'a': L['upper_arm']['l'], 'alpha': np.pi / 2},
+        {'theta': theta6, 'd': L['wrist']['l'], 'a': 0, 'alpha': -np.pi / 2}
+    ]
+    for params in dh_params:
+        T = np.dot(T, dh_transformation_matrix(**params))
+    return T
+
+def dh_transformation_matrix(theta, d, a, alpha):
+    return np.array([
+        [np.cos(theta), -np.sin(theta) * np.cos(alpha), np.sin(theta) * np.sin(alpha), a * np.cos(theta)],
+        [np.sin(theta), np.cos(theta) * np.cos(alpha), -np.cos(theta) * np.sin(alpha), a * np.sin(theta)],
+        [0, np.sin(alpha), np.cos(alpha), d],
+        [0, 0, 0, 1]
+    ])
+
+# Define the objective function to minimize
+def objective_function(theta_values, desired_position, L):
+    current_position = forward_kinematics(theta_values, L)[:3, 3]
+    return np.linalg.norm(current_position - desired_position)
+
+# Link lengths
+L = {
+    'world': {'l': 45},
+    'base': {'l': 45},
+    'lower_arm': {'l': 95},
+    'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
+    'elbow': {'l': 18},
+    'upper_arm': {'l': 157},
+    'wrist': {'l': 75}
+}
+
+# Initial guess for theta values (all zeros)
+initial_guess = np.zeros(6)
+
+# Desired end-effector position
+desired_position = np.array([30, 7, 125])
+
+# Perform the optimization
+result = minimize(objective_function, initial_guess, args=(desired_position, L), method='SLSQP')
+
+# Extract the optimized joint angles
+optimized_theta_values = result.x
+
+# Convert the optimized joint angles from radians to degrees
+optimized_theta_degrees = np.degrees(optimized_theta_values)
+
+print("Optimized Joint Angles (in degrees):", optimized_theta_degrees)
+
+# Save the joint angles to a text file
+output_file = "joint_angles.txt"
+with open(output_file, 'w') as file:
+    for i, angle in enumerate(optimized_theta_degrees, start=1):
+        file.write(f"Theta{i}: {angle:.2f} degrees\n")
+
+print(f"Joint angles have been saved to {output_file}")
