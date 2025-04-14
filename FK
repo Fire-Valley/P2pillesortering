@@ -159,22 +159,22 @@ def dh_transformation_matrix(theta, d, a, alpha):
         A 4x4 transformation matrix
     """
     return sp.Matrix([
-        [sp.cos(theta), -sp.sin(theta) * sp.cos(alpha), sp.sin(theta) * sp.sin(alpha), a * sp.cos(theta)],
-        [sp.sin(theta), sp.cos(theta) * sp.cos(alpha), -sp.cos(theta) * sp.sin(alpha), a * sp.sin(theta)],
-        [0, sp.sin(alpha), sp.cos(alpha), d],
+        [sp.cos(theta), -sp.sin(theta), 0, a],
+        [sp.sin(theta) * sp.cos(alpha), sp.cos(theta) * sp.cos(alpha), -sp.sin(alpha), -sp.sin(alpha)*d],
+        [sp.sin(theta) * sp.sin(alpha), sp.cos(theta) * sp.sin(alpha), sp.cos(alpha), sp.cos(alpha)*d],
         [0, 0, 0, 1]
     ])
 
 # Example usage with DH parameters
 L = {
-    'world': {'l': 45},
-    'base': {'l': 45},
-    'lower_arm': {'l': 95},
-    'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
-    'elbow': {'l': 18},
-    'upper_arm': {'l': 157},
-    'wrist': {'l': 75}
-}
+        'world': {'l': 45},
+        'base': {'l': 45},
+        'lower_arm': {'l': 95},
+        'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
+        'elbow': {'l': 18},
+        'upper_arm': {'l': 157},
+        'wrist': {'l': 75}
+    }
 
 # DH parameters for each joint with symbolic values for theta
 dh_params = [
@@ -198,4 +198,3 @@ T_simplified = sp.simplify(T)
 print("Simplified Overall Transformation Matrix (Base to End-Effector):")
 sp.pprint(T_simplified, num_columns = 250, wrap_line = False)
 print(T_dumb)
-
