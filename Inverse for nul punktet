@@ -1,0 +1,51 @@
+import numpy as np
+
+# Define the lengths of the robot arm segments
+L = {
+    'world': {'l': 90},
+    'base': {'l': 45},
+    'lower_arm': {'l': 95},
+    'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
+    'elbow': {'l': 18},
+    'upper_arm': {'l': 157},
+    'wrist': {'l': 70}
+}
+#Calculate the thetas values to get into desired position zero
+def geometric_inverse_kinematics(desired_position_zero, L):
+    x, y, z = desired_position_zero
+
+    theta1_deg = 0
+    theta4_deg = 0
+    theta5_deg = 0
+    theta6_deg = 0
+
+    # Calculate the lengths of the segments
+    L1 = L['lower_arm']['l']
+    L2 = L['upper_arm']['l'] + L['wrist']['l']
+    L3 = np.sqrt(L1**2 + L2**2)
+
+    # Calculate theta2 using the law of cosines
+    theta2_rad = np.arccos((L3**2 + L1**2 - L2**2) / (2 * L3 * L1))
+
+    # Convert theta2 from radians to degrees
+    theta2_deg = np.degrees(theta2_rad)
+
+    # Calculate theta3 using the law of cosines
+    theta3_rad = np.arccos((L2**2 + L1**2 - L3**2) / (2 * L2 * L1))
+
+    # Convert theta3 from radians to degrees
+    theta3_deg = np.degrees(theta3_rad)
+
+    return theta1_deg ,theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
+
+# Define the desired position
+desired_position_zero = (280, 0, 260)
+
+# Print theta values in degrees for the zero position
+theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematics(desired_position_zero, L)
+print("Theta1 (degrees):", theta1_deg)
+print("Theta2 (degrees):", theta2_deg)
+print("Theta3 (degrees):", theta3_deg)
+print("Theta4 (degrees):", theta4_deg)
+print("Theta5 (degrees):", theta5_deg)
+print("Theta6 (degrees):", theta6_deg)
