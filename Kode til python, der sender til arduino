@@ -1,0 +1,37 @@
+import os
+
+arduino_project_path = r"C:\Users\ehage\OneDrive\Skrivebord\PyArduinoForbindelse"  # ← Ændr denne sti!!
+
+positions = [
+    {"name": "Dispenser1", "angles": [10, 20, 30, 40, 50, 60]},
+    {"name": "Dispenser2", "angles": [15, 25, 35, 45, 55, 65]},
+    {"name": "Dispenser3", "angles": [20, 30, 40, 50, 60, 70]},
+    {"name": "Dispenser4", "angles": [50, 100, 130, 50, 60, 70]},
+] 
+# man kan bare tilføje så mange man har lyst til
+
+positions_h_content = "#pragma once\n\n"
+positions_h_content += f"const int NUM_POSITIONS = {len(positions)};\n\n"
+
+# Tilføj vinkler
+positions_h_content += "const int angles[NUM_POSITIONS][6] = {\n"
+for pos in positions:
+    angles_str = ", ".join(str(a) for a in pos["angles"])
+    positions_h_content += f"  {{{angles_str}}},\n"
+positions_h_content += "};\n\n"
+
+# Tilføj positions navne navne
+positions_h_content += "const char* dispenserNames[NUM_POSITIONS] = {\n"
+for pos in positions:
+    positions_h_content += f'  "{pos["name"]}",\n'
+positions_h_content += "};\n"
+
+# === 4. GEM positions.h I ARDUINO MAPPEN ===
+positions_file = os.path.join(arduino_project_path, "positions.h")
+
+try:
+    with open(positions_file, "w") as f:
+        f.write(positions_h_content)
+    print(f"positions.h gemt korrekt i: {positions_file}")
+except Exception as e:
+    print(f"Fejl under skrivning af positions.h: {e}")
