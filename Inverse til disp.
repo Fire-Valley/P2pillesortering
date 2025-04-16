@@ -14,25 +14,34 @@ L = {
 def geometric_inverse_kinematic_for_disp1_ud(desired_position, L):
     x, y, z = desired_position
 
-    # We have a point in the x, y plane to calculate theta 1 (240, 110)
-    x, y = -80, 240
-
+    # Theta 1
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
-    # To calculate theta 2 we have to create a new triangle
-    # We will go 30mm the opposite direction of the dispensers
-    L1 = L['lower_arm']['l']
-    NewL = np.sqrt(L1**2 + 90**2)
+    # Beregn afstand fra base til ønsket position (projektion på xy-plan)
+    r = np.sqrt(x**2 + y**2)
+    z_offset = z - L['base']['l']  # Højdeforskel fra basen til punktet
 
-    theta2_rad = np.arccos((NewL**2 + 90**2 - L1**2) / (2 * NewL * 90))
+    # Brug cosine law til at finde vinkler
+    a = L['lower_arm']['l'] + L['elbow']['l']  # første led + albue
+    b = L['upper_arm']['l'] + L['wrist']['l']  # anden led
+    c = np.sqrt(r**2 + z_offset**2)  # afstanden til målpunktet
+
+    # Sikkerhedstjek (robotten kan ikke nå for langt væk)
+    if c > (a + b):
+        raise ValueError("Target is out of reach")
+
+    # Vinkel theta2 (vinkel mellem base og første led)
+    angle_a = np.arccos((b**2 + c**2 - a**2) / (2 * b * c))
+    angle_b = np.arctan2(z_offset, r)
+    theta2_rad = angle_b + angle_a
     theta2_deg = np.degrees(theta2_rad)
 
-    # To calculate theta 3, we look at the triangle from theta 2 while adding the elbow
-    theta3_rad = np.arccos((NewL**2 + 90**2 - (L1 + L['elbow']['l'])**2) / (2 * NewL * 90))
-    theta3_deg = (np.degrees(theta3_rad) + theta2_deg)
+    # Vinkel theta3 (vinkel mellem første og anden led)
+    angle_c = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
+    theta3_deg = 180 - np.degrees(angle_c)
 
-    # Theta 4, 5, and 6 with this position do not change so
+    # Placeholder værdier for håndled
     theta4_deg = 180
     theta5_deg = 80
     theta6_deg = 70
@@ -42,27 +51,34 @@ def geometric_inverse_kinematic_for_disp1_ud(desired_position, L):
 def geometric_inverse_kinematic_for_disp1_ind(desired_position, L):
     x, y, z = desired_position
 
-    # Since the direction in the x, y plane does not change the theta value stays the same
-    x, y = -80, 240
-
+    # Theta 1
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
-    # To calculate theta 2 value we will again use geometry using triangles
-    # We will move 80mm to get to the dispensers position
-    L1 = L['lower_arm']['l']+L['elbow']['l']
-    L2W = L['upper_arm']['l']+L['wrist']['l']
-    L3 = np.sqrt(L1**2 + 15**2)
-    NewL = np.sqrt(280**2 + 250**2)
+    # Beregn afstand fra base til ønsket position (projektion på xy-plan)
+    r = np.sqrt(x**2 + y**2)
+    z_offset = z - L['base']['l']  # Højdeforskel fra basen til punktet
 
-    theta2_rad = np.arccos((L3**2 + NewL**2 - L2W**2) / (2 * L3 * NewL))
+    # Brug cosine law til at finde vinkler
+    a = L['lower_arm']['l'] + L['elbow']['l']  # første led + albue
+    b = L['upper_arm']['l'] + L['wrist']['l']  # anden led
+    c = np.sqrt(r**2 + z_offset**2)  # afstanden til målpunktet
+
+    # Sikkerhedstjek
+    if c > (a + b):
+        raise ValueError("Target is out of reach")
+
+    # Vinkel theta2 (vinkel mellem base og første led)
+    angle_a = np.arccos((b**2 + c**2 - a**2) / (2 * b * c))
+    angle_b = np.arctan2(z_offset, r)
+    theta2_rad = angle_b + angle_a
     theta2_deg = np.degrees(theta2_rad)
 
-    # To calculate theta 3 we use the same approach as disp_ud
-    theta3_rad = np.arccos((L2W**2 + L3**2 - NewL**2) / (2 * L2W * L3))
-    theta3_deg = (np.degrees(theta3_rad) + theta2_deg)
+    # Vinkel theta3 (vinkel mellem første og anden led)
+    angle_c = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
+    theta3_deg = 180 - np.degrees(angle_c)
 
-    # Theta 4, 5, and 6 with this position do not change so
+    # Placeholder værdier for håndled
     theta4_deg = 0
     theta5_deg = 0
     theta6_deg = 0
@@ -77,7 +93,7 @@ desired_position_ind = (-130, 280, 240)
 theta_values_ud = geometric_inverse_kinematic_for_disp1_ud(desired_position_ud, L)
 theta_values_ind = geometric_inverse_kinematic_for_disp1_ind(desired_position_ind, L)
 
-#Print for disp1_ud
+# Print for disp1_ud
 print("Theta values for disp1_ud:")
 print("Theta1 in Degrees:", theta_values_ud[0])
 print("Theta2 in Degrees:", theta_values_ud[1])
@@ -86,7 +102,7 @@ print("Theta4 in Degrees:", theta_values_ud[3])
 print("Theta5 in Degrees:", theta_values_ud[4])
 print("Theta6 in Degrees:", theta_values_ud[5])
 
-#Print for disp1_ind
+# Print for disp1_ind
 print("Theta values for disp1_ind:")
 print("Theta1 in Degrees:", theta_values_ind[0])
 print("Theta2 in Degrees:", theta_values_ind[1])
