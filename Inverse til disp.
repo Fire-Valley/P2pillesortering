@@ -1,0 +1,96 @@
+import numpy as np
+
+# Define the lengths of the robot arm segments
+L = {
+    'world': {'l': 90},
+    'base': {'l': 45},
+    'lower_arm': {'l': 95},
+    'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
+    'elbow': {'l': 18},
+    'upper_arm': {'l': 175},
+    'wrist': {'l': 70}
+}
+
+def geometric_inverse_kinematic_for_disp1_ud(desired_position, L):
+    x, y, z = desired_position
+
+    # We have a point in the x, y plane to calculate theta 1 (240, 110)
+    x, y = -80, 240
+
+    theta1_rad = np.arctan2(y, x)
+    theta1_deg = np.degrees(theta1_rad)
+
+    # To calculate theta 2 we have to create a new triangle
+    # We will go 30mm the opposite direction of the dispensers
+    L1 = L['lower_arm']['l']
+    NewL = np.sqrt(L1**2 + 90**2)
+
+    theta2_rad = np.arccos((NewL**2 + 90**2 - L1**2) / (2 * NewL * 90))
+    theta2_deg = np.degrees(theta2_rad)
+
+    # To calculate theta 3, we look at the triangle from theta 2 while adding the elbow
+    theta3_rad = np.arccos((NewL**2 + 90**2 - (L1 + L['elbow']['l'])**2) / (2 * NewL * 90))
+    theta3_deg = (np.degrees(theta3_rad) + theta2_deg)
+
+    # Theta 4, 5, and 6 with this position do not change so
+    theta4_deg = 180
+    theta5_deg = 80
+    theta6_deg = 70
+
+    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
+
+def geometric_inverse_kinematic_for_disp1_ind(desired_position, L):
+    x, y, z = desired_position
+
+    # Since the direction in the x, y plane does not change the theta value stays the same
+    x, y = -80, 240
+
+    theta1_rad = np.arctan2(y, x)
+    theta1_deg = np.degrees(theta1_rad)
+
+    # To calculate theta 2 value we will again use geometry using triangles
+    # We will move 80mm to get to the dispensers position
+    L1 = L['lower_arm']['l']+L['elbow']['l']
+    L2W = L['upper_arm']['l']+L['wrist']['l']
+    L3 = np.sqrt(L1**2 + 15**2)
+    NewL = np.sqrt(280**2 + 250**2)
+
+    theta2_rad = np.arccos((L3**2 + NewL**2 - L2W**2) / (2 * L3 * NewL))
+    theta2_deg = np.degrees(theta2_rad)
+
+    # To calculate theta 3 we use the same approach as disp_ud
+    theta3_rad = np.arccos((L2W**2 + L3**2 - NewL**2) / (2 * L2W * L3))
+    theta3_deg = (np.degrees(theta3_rad) + theta2_deg)
+
+    # Theta 4, 5, and 6 with this position do not change so
+    theta4_deg = 0
+    theta5_deg = 0
+    theta6_deg = 0
+
+    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
+
+# Define the desired positions
+desired_position_ud = (-110, 240, 240)
+desired_position_ind = (-130, 280, 240)
+
+# Call the functions and store the results
+theta_values_ud = geometric_inverse_kinematic_for_disp1_ud(desired_position_ud, L)
+theta_values_ind = geometric_inverse_kinematic_for_disp1_ind(desired_position_ind, L)
+
+#Print for disp1_ud
+print("Theta values for disp1_ud:")
+print("Theta1 in Degrees:", theta_values_ud[0])
+print("Theta2 in Degrees:", theta_values_ud[1])
+print("Theta3 in Degrees:", theta_values_ud[2])
+print("Theta4 in Degrees:", theta_values_ud[3])
+print("Theta5 in Degrees:", theta_values_ud[4])
+print("Theta6 in Degrees:", theta_values_ud[5])
+
+#Print for disp1_ind
+print("Theta values for disp1_ind:")
+print("Theta1 in Degrees:", theta_values_ind[0])
+print("Theta2 in Degrees:", theta_values_ind[1])
+print("Theta3 in Degrees:", theta_values_ind[2])
+print("Theta4 in Degrees:", theta_values_ind[3])
+print("Theta5 in Degrees:", theta_values_ind[4])
+print("Theta6 in Degrees:", theta_values_ind[5])
