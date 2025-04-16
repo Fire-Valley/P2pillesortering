@@ -14,76 +14,85 @@ L = {
 def geometric_inverse_kinematic_for_disp1_ud(desired_position, L):
     x, y, z = desired_position
 
-    # Theta 1
+    # Calculate theta1
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
-    # Beregn afstand fra base til ønsket position (projektion på xy-plan)
+    # Horizontal distance from origin to target
     r = np.sqrt(x**2 + y**2)
-    z_offset = z - L['base']['l']  # Højdeforskel fra basen til punktet
 
-    # Brug cosine law til at finde vinkler
-    a = L['lower_arm']['l'] + L['elbow']['l']  # første led + albue
-    b = L['upper_arm']['l'] + L['wrist']['l']  # anden led
-    c = np.sqrt(r**2 + z_offset**2)  # afstanden til målpunktet
+    # Vertical offset from base to z
+    z_offset = z - L['base']['l']
 
-    # Sikkerhedstjek (robotten kan ikke nå for langt væk)
-    if c > (a + b):
-        raise ValueError("Target is out of reach")
+    # Total distance from base to point
+    c = np.sqrt(r**2 + z_offset**2)
 
-    # Vinkel theta2 (vinkel mellem base og første led)
-    angle_a = np.arccos((b**2 + c**2 - a**2) / (2 * b * c))
-    angle_b = np.arctan2(z_offset, r)
-    theta2_rad = angle_b + angle_a
+    # Links
+    a = L['lower_arm']['l']
+    b = L['upper_arm']['l'] + L['wrist']['l']
+    e = L['elbow']['l']
+
+    if c > (a + e + b):
+        print("⚠️ Target is out of reach — approximating anyway")
+        c = a + e + b - 1e-6  # Avoid domain error in arccos
+
+    # Effective length from base to elbow
+    L1 = a
+    NewL = np.sqrt(L1**2 + 90**2)
+
+    theta2_rad = np.arccos((NewL**2 + 90**2 - L1**2) / (2 * NewL * 90))
     theta2_deg = np.degrees(theta2_rad)
 
-    # Vinkel theta3 (vinkel mellem første og anden led)
-    angle_c = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
-    theta3_deg = 180 - np.degrees(angle_c)
+    theta3_rad = np.arccos((NewL**2 + 90**2 - (L1 + e)**2) / (2 * NewL * 90))
+    theta3_deg = np.degrees(theta3_rad) + theta2_deg
 
-    # Placeholder værdier for håndled
+    # DH conventions
+    theta2_DH = theta2_deg + 90
+    theta3_DH = theta3_deg + theta2_deg
+
+    # Fixed orientation
     theta4_deg = 180
     theta5_deg = 80
     theta6_deg = 70
 
-    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
+    return theta1_deg, theta2_DH, theta3_DH, theta4_deg, theta5_deg, theta6_deg
 
 def geometric_inverse_kinematic_for_disp1_ind(desired_position, L):
     x, y, z = desired_position
 
-    # Theta 1
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
-    # Beregn afstand fra base til ønsket position (projektion på xy-plan)
     r = np.sqrt(x**2 + y**2)
-    z_offset = z - L['base']['l']  # Højdeforskel fra basen til punktet
+    z_offset = z - L['base']['l']
+    c = np.sqrt(r**2 + z_offset**2)
 
-    # Brug cosine law til at finde vinkler
-    a = L['lower_arm']['l'] + L['elbow']['l']  # første led + albue
-    b = L['upper_arm']['l'] + L['wrist']['l']  # anden led
-    c = np.sqrt(r**2 + z_offset**2)  # afstanden til målpunktet
+    # Links
+    a = L['lower_arm']['l'] + L['elbow']['l']
+    b = L['upper_arm']['l'] + L['wrist']['l']
 
-    # Sikkerhedstjek
     if c > (a + b):
-        raise ValueError("Target is out of reach")
+        print("⚠️ Target is out of reach — approximating anyway")
+        c = a + b - 1e-6
 
-    # Vinkel theta2 (vinkel mellem base og første led)
-    angle_a = np.arccos((b**2 + c**2 - a**2) / (2 * b * c))
-    angle_b = np.arctan2(z_offset, r)
-    theta2_rad = angle_b + angle_a
+    L3 = np.sqrt(a**2 + 15**2)
+    NewL = c
+
+    theta2_rad = np.arccos((L3**2 + NewL**2 - b**2) / (2 * L3 * NewL))
     theta2_deg = np.degrees(theta2_rad)
 
-    # Vinkel theta3 (vinkel mellem første og anden led)
-    angle_c = np.arccos((a**2 + b**2 - c**2) / (2 * a * b))
-    theta3_deg = 180 - np.degrees(angle_c)
+    theta3_rad = np.arccos((b**2 + L3**2 - NewL**2) / (2 * b * L3))
+    theta3_deg = np.degrees(theta3_rad) + theta2_deg
 
-    # Placeholder værdier for håndled
+    # DH conventions
+    theta2_DH = theta2_deg + 90
+    theta3_DH = theta3_deg + theta2_deg
+
     theta4_deg = 0
     theta5_deg = 0
     theta6_deg = 0
 
-    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
+    return theta1_deg, theta2_DH, theta3_DH, theta4_deg, theta5_deg, theta6_deg
 
 # Define the desired positions
 desired_position_ud = (-110, 240, 240)
@@ -94,7 +103,7 @@ theta_values_ud = geometric_inverse_kinematic_for_disp1_ud(desired_position_ud, 
 theta_values_ind = geometric_inverse_kinematic_for_disp1_ind(desired_position_ind, L)
 
 # Print for disp1_ud
-print("Theta values for disp1_ud:")
+print("\nTheta values for disp1_ud:")
 print("Theta1 in Degrees:", theta_values_ud[0])
 print("Theta2 in Degrees:", theta_values_ud[1])
 print("Theta3 in Degrees:", theta_values_ud[2])
@@ -103,7 +112,7 @@ print("Theta5 in Degrees:", theta_values_ud[4])
 print("Theta6 in Degrees:", theta_values_ud[5])
 
 # Print for disp1_ind
-print("Theta values for disp1_ind:")
+print("\nTheta values for disp1_ind:")
 print("Theta1 in Degrees:", theta_values_ind[0])
 print("Theta2 in Degrees:", theta_values_ind[1])
 print("Theta3 in Degrees:", theta_values_ind[2])
