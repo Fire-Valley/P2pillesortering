@@ -1,4 +1,5 @@
 import numpy as np
+from Inverse_zero_position import theta1_deg, theta2_deg
 
 # Define the lengths of the robot arm segments
 L = {
@@ -18,44 +19,27 @@ def geometric_inverse_kinematic_for_disp1_ud(desired_position, L):
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
-    # Horizontal distance from origin to target
-    r = np.sqrt(x**2 + y**2)
-
-    # Vertical offset from base to z
-    z_offset = z - L['base']['l']
-
-    # Total distance from base to point
-    c = np.sqrt(r**2 + z_offset**2)
-
     # Links
-    a = L['lower_arm']['l']
-    b = L['upper_arm']['l'] + L['wrist']['l']
-    e = L['elbow']['l']
+    L1E = L['lower_arm']['l'] + L['elbow']['l']
+    L2W = L['upper_arm']['l'] + L['wrist']['l']
 
-    if c > (a + e + b):
-        print("⚠️ Target is out of reach — approximating anyway")
-        c = a + e + b - 1e-6  # Avoid domain error in arccos
+    NewL = np.sqrt(y ** 2 + z ** 2)
+    L3 = np.sqrt(L1E ** 2 - 50 ** 2)
 
-    # Effective length from base to elbow
-    L1 = a
-    NewL = np.sqrt(L1**2 + 90**2)
+    theta2_rad1 = np.arccos((L3 ** 2 + NewL ** 2 - L2W ** 2) / (2 * NewL * L3))
+    theta2_rad2 = np.cos(y / NewL)
+    theta2_rad = theta2_rad1 + theta2_rad2
+    theta2_deg = 180 - (np.degrees(theta2_rad))
 
-    theta2_rad = np.arccos((NewL**2 + 90**2 - L1**2) / (2 * NewL * 90))
-    theta2_deg = np.degrees(theta2_rad)
+    theta3_rad = np.arccos((L2W ** 2 + L3 ** 2 - NewL ** 2) / (2 * L2W * L3))
+    theta3_deg = np.degrees(theta3_rad)
+    theta3_deg += theta2_deg
 
-    theta3_rad = np.arccos((NewL**2 + 90**2 - (L1 + e)**2) / (2 * NewL * 90))
-    theta3_deg = np.degrees(theta3_rad) + theta2_deg
-
-    # DH conventions
-    theta2_DH = theta2_deg + 90
-    theta3_DH = theta3_deg + theta2_deg
-
-    # Fixed orientation
     theta4_deg = 180
     theta5_deg = 80
     theta6_deg = 70
 
-    return theta1_deg, theta2_DH, theta3_DH, theta4_deg, theta5_deg, theta6_deg
+    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
 
 def geometric_inverse_kinematic_for_disp1_ind(desired_position, L):
     x, y, z = desired_position
@@ -63,44 +47,40 @@ def geometric_inverse_kinematic_for_disp1_ind(desired_position, L):
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
-    r = np.sqrt(x**2 + y**2)
-    z_offset = z - L['base']['l']
-    c = np.sqrt(r**2 + z_offset**2)
-
     # Links
-    a = L['lower_arm']['l'] + L['elbow']['l']
-    b = L['upper_arm']['l'] + L['wrist']['l']
+    L1E = L['lower_arm']['l'] + L['elbow']['l']
+    L2W = L['upper_arm']['l'] + L['wrist']['l']
 
-    if c > (a + b):
-        print("⚠️ Target is out of reach — approximating anyway")
-        c = a + b - 1e-6
+    NewL = np.sqrt(y**2 + z**2)
+    L3 = np.sqrt(L1E**2+130**2)
 
-    L3 = np.sqrt(a**2 + 15**2)
-    NewL = c
+    theta2_rad1 = np.arccos((L3**2 + NewL**2 - L2W**2) / (2 * NewL * L3))
+    theta2_rad2 = np.cos(y/NewL)
+    theta2_rad = theta2_rad1+theta2_rad2
+    theta2_deg = 180 - (np.degrees(theta2_rad))
 
-    theta2_rad = np.arccos((L3**2 + NewL**2 - b**2) / (2 * L3 * NewL))
-    theta2_deg = np.degrees(theta2_rad)
+    theta3_rad = np.arccos((L2W**2 + L3**2 - NewL**2) / (2 * L2W * L3))
+    theta3_deg = np.degrees(theta3_rad)
+    theta3_deg += theta2_deg
 
-    theta3_rad = np.arccos((b**2 + L3**2 - NewL**2) / (2 * b * L3))
-    theta3_deg = np.degrees(theta3_rad) + theta2_deg
+    theta4_deg = 180
+    theta5_deg = 80
+    theta6_deg = 70
 
-    # DH conventions
-    theta2_DH = theta2_deg + 90
-    theta3_DH = theta3_deg + theta2_deg
+    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
 
-    theta4_deg = 0
-    theta5_deg = 0
-    theta6_deg = 0
 
-    return theta1_deg, theta2_DH, theta3_DH, theta4_deg, theta5_deg, theta6_deg
 
 # Define the desired positions
-desired_position_ud = (-110, 240, 240)
-desired_position_ind = (-130, 280, 240)
+desired_position_ud = (105, 200, 80)
+desired_position_ind = (105, 250, 80)
 
 # Call the functions and store the results
 theta_values_ud = geometric_inverse_kinematic_for_disp1_ud(desired_position_ud, L)
 theta_values_ind = geometric_inverse_kinematic_for_disp1_ind(desired_position_ind, L)
+
+angles_clamped = [max(0, min(180, theta2_deg)) for theta2_deg in theta_values_ud]
+angles_clamped = [max(0, min(180, theta2_deg)) for theta2_deg in theta_values_ind]
 
 # Print for disp1_ud
 print("\nTheta values for disp1_ud:")
