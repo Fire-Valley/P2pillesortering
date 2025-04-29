@@ -1,0 +1,216 @@
+"""
+    Author: Rasmus Leck Kæseler 
+    Date: 2025-03-12
+    Version: 1.0
+    Description: A forward kinematic model of the micro ABB robot. 
+"""
+
+import numpy as np
+import math
+
+def angle_between_vectors(u, v):
+    dot_product = sum(i*j for i, j in zip(u, v))
+    norm_u = math.sqrt(sum(i**2 for i in u))
+    norm_v = math.sqrt(sum(i**2 for i in v))
+    cos_theta = dot_product / (norm_u * norm_v)
+    angle_rad = math.acos(cos_theta)
+    angle_deg = math.degrees(angle_rad)
+    return angle_deg
+
+class robot_arm:
+    # ekstra link:
+    side_d1 = 22
+    side_link = 120
+    side_d2 = 33
+
+    #DH parameters:
+    d1 = 45+60
+    a1 = 45
+    a2 = 95
+    a3 = 10
+    d4 = 160
+    d7 = 50
+
+    def __init__(self, ax):
+        # Motor angles:
+        self.motor_joints = np.array([0,0,0,0,0,0])*np.pi/180
+        self.q = np.array([0,0,0,0,0,0])*np.pi/180
+        self.calc_joint_angles()
+
+        # DH parameters: [d, a, alpha, theta] (IKKE MODIFICERET)
+        # OBS: jeg sætter motor offset i "motor_angles" funktionen, så theta sættes til 0
+        self.DH = [ [self.d1,  self.a1,  np.pi/2,  0.],
+                    [0., self.a2, 0, 0],
+                    [0., self.a3, np.pi/2, 0],
+                    [self.d4, 0., np.pi/2, 0.],
+                    [0, 0., -np.pi/2, 0.],
+                    [0, 0., 0, 0.],
+                    [self.d7, 0., 0, 0.]]
+
+        self.forward_kinematics()
+
+        # Plot robot:
+        [self.robot_lines] = ax.plot([0,self.pA[0], self.pB[0], self.pC[0], self.pD[0], self.pE[0], self.pF[0], self.pEnd[0]], [0, self.pA[1], self.pB[1], self.pC[1], self.pD[1], self.pE[1], self.pF[1], self.pEnd[1]], [0,self.pA[2], self.pB[2], self.pC[2], self.pD[2], self.pE[2], self.pF[2],self.pEnd[2]], 'ko-')
+        [self.extra_lines] = ax.plot([self.pA[0], self.pS1[0], self.pS2[0], self.pB[0]], [self.pA[1], self.pS1[1], self.pS2[1], self.pB[1]], [self.pA[2], self.pS1[2], self.pS2[2], self.pB[2]], 'ro-')
+
+        # Plot z-axer
+        self.ZCaxis = []
+        for i, coordinate in enumerate([self.T0, self.T1, self.T2, self.T3, self.T4, self.T5, self.T]):
+            cax = ax.quiver(coordinate[0, 3], coordinate[1, 3], coordinate[2, 3], coordinate[0,2], coordinate[1, 2], coordinate[2, 2] , length=20, color='b')
+            self.ZCaxis.append(cax)
+
+        # Plot x-axer
+        self.XCaxis = []
+        for i, coordinate in enumerate([self.T0, self.T1, self.T2, self.T3, self.T4, self.T5, self.T]):
+            cax = ax.quiver(coordinate[0, 3], coordinate[1, 3], coordinate[2, 3], coordinate[0,0], coordinate[1, 0], coordinate[2, 0] , length=20, color='r')
+            self.XCaxis.append(cax)
+        self.ax = ax
+
+    def calc_joint_angles(self, motor_joints=None):
+        # udregn joint vinklerne ud fra motor vinklerne:
+        if motor_joints is not  None:
+            self.motor_joints = motor_joints # Opdater modellens motor vinkler
+
+        # Udregn joint anglerne ud fra motor vinklerne:
+        self.q[0] = self.motor_joints[0]
+        self.q[1] = self.motor_joints[1]+np.pi/2
+        self.sidebar = self.motor_joints[2] + np.pi
+        self.q[2] = self.find_joint2()
+        self.q[3] = self.motor_joints[3]
+        self.q[4] = self.motor_joints[4]
+        self.q[5] = self.motor_joints[5]
+        return self.q
+
+    def forward_kinematics(self, q=None, use_motor_angles=False):
+        ## Forward kinematics:
+        DH = self.DH
+        if use_motor_angles:
+            if q is None:
+                q = self.calc_joint_angles()
+            else:
+                # Hvis q er givet, er dette motor vinklerne:
+                motor_joints = q
+                q = self.calc_joint_angles(motor_joints)
+        else:
+            # Her bruger vi joint vinklerne (ikke motor vinklerne)
+            if q is None:
+                q = self.q
+            else:
+                self.q = q
+
+        # Udfør DH transformationerne:
+        self.T0 = self._T(DH[0][0], DH[0][1], DH[0][2], q[0])
+        self.T1 = self.T0@self._T(DH[1][0], DH[1][1], DH[1][2], q[1])
+        self.T2 = self.T1@self._T(DH[2][0], DH[2][1], DH[2][2], q[2])
+        self.T3 = self.T2@self._T(DH[3][0], DH[3][1], DH[3][2], q[3])
+        self.T4 = self.T3@self._T(DH[4][0], DH[4][1], DH[4][2], q[4])
+        self.T5 = self.T4@self._T(DH[5][0], DH[5][1], DH[5][2], q[5])
+        # Jeg inkludere et ektra led til end-effektoren
+        self.T = self.T5@self._T(DH[6][0], DH[6][1], DH[6][2], 0)
+
+        # Udtræk positionerne for koordinatsystemerne:
+        self.pA = self.T0[:3,3]
+        self.pB = self.T1[:3,3]
+        self.pC = self.T2[:3,3]
+        self.pD = self.T3[:3,3]
+        self.pE = self.T4[:3,3]
+        self.pF = self.T5[:3,3]
+        self.pEnd = self.T[:3,3]
+
+        ## Parallel link:
+        # Udregning af positionerne for de to punkter i den parallelle led:
+        Ts1 = self.T0 @ self._T(0, self.side_d1, 0, self.sidebar) #self._T (0, self.d1, 0, 0)
+        Ts2 = self.T1 @ self._T(0, self.side_d2, 0, self.q[2]+np.pi/2)
+        self.pS1 = Ts1[:3, 3]
+        self.pS2 = Ts2[:3, 3]
+        #distancen imellem de to punkter kan bruges til at evaluere om koden virker (den skal være lig med side_link)
+        dL = self.pS1 - self.pS2
+
+
+        #Hvis man vil se vinklerne mellem de forskellige i det parallelle led:
+        
+
+
+    def find_joint2(self):
+        """         o  B
+             c  .'  :
+              .'    :
+          C o       :
+            .       :b
+            .       :
+            . d     :
+            .       o  A
+            .     .
+            .   . a
+            . .
+          D o
+        """
+        a = self.side_d1 # length of the first link
+        b = self.a2
+        c = self.side_d2
+        d = self.side_link # length of the second link
+
+        A = self.q[1]
+        C = self.sidebar
+
+        # Jeg vælger at løse dette led algebraisk
+        K1 = np.cos(A)*a - np.cos(C)*c
+        K2 = np.sin(A)*a - np.sin(C)*c
+        K3 = (d**2 - b**2 - K1**2 - K2**2)/(2*b)
+
+        p_a = K3+K1
+        p_b = -2*K2
+        p_c = K3-K1
+
+        x1 = (-p_b + (p_b**2 - 4*p_a*p_c)**0.5)/(2*p_a)
+        x2 = (-p_b - (p_b**2 - 4*p_a*p_c)**0.5)/(2*p_a)
+
+        sol1 = np.arctan(x1)*2-A
+        sol2 = np.arctan(x2)*2-A
+
+        if sol1 < -np.pi:
+            sol1 = sol1 + np.pi*2
+        elif sol1 > np.pi:
+            sol1 = sol1 - np.pi*2
+        if sol1 < -np.pi:
+            sol1 = sol1 + np.pi*2
+        elif sol1 > np.pi:
+            sol1 = sol1 - np.pi*2
+
+        # Find løsningen tættest på 90 grader:
+        solutions = np.array([sol1, sol2])
+        distance = np.abs(solutions - np.pi/2)
+        idx = np.argmin(distance)
+        B = solutions[idx]
+        print("sol1 = ", sol1*180/np.pi, " , sol2= ", sol2*180/np.pi)
+        return B-np.pi/2 # Vinklen er forskudt med pi/2 ift det forrige led
+
+    def update_robot(self ):
+        # Plot robotten (opdatere plottet fra tidligere)
+        self.forward_kinematics()
+        self.robot_lines.set_data([0,self.pA[0], self.pB[0], self.pC[0], self.pD[0], self.pE[0], self.pF[0], self.pEnd[0]], [0, self.pA[1], self.pB[1], self.pC[1], self.pD[1], self.pE[1], self.pF[1], self.pEnd[1]])
+        self.robot_lines.set_3d_properties([0,self.pA[2], self.pB[2], self.pC[2], self.pD[2], self.pE[2], self.pF[2], self.pEnd[2]])
+        self.extra_lines.set_data([self.pA[0], self.pS1[0], self.pS2[0], self.pB[0]], [self.pA[1], self.pS1[1], self.pS2[1], self.pB[1]])
+        self.extra_lines.set_3d_properties([self.pA[2], self.pS1[2], self.pS2[2], self.pB[2]])
+
+        for i, coordinate in enumerate([self.T0, self.T1, self.T2, self.T3, self.T4, self.T5, self.T]):
+            self.ZCaxis[i].remove()
+            self.XCaxis[i].remove()
+            self.ZCaxis[i] = self.ax.quiver(coordinate[0, 3], coordinate[1, 3], coordinate[2, 3], coordinate[0,2], coordinate[1, 2], coordinate[2, 2] , length=20, color='b')
+            self.XCaxis[i] = self.ax.quiver(coordinate[0, 3], coordinate[1, 3], coordinate[2, 3], coordinate[0,0], coordinate[1, 0], coordinate[2, 0] , length=20, color='r')
+
+    def _T(self, d, a, alpha, theta):
+        # DH transformation matrix:
+        T = np.array([[np.cos(theta), -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha), a*np.cos(theta)],
+                      [np.sin(theta), np.cos(theta)*np.cos(alpha), -np.cos(theta)*np.sin(alpha), a*np.sin(theta)],
+                      [0, np.sin(alpha), np.cos(alpha), d],
+                      [0,0,0,1]])
+        return T
+
+        print("A = ", angle_between_vectors(self.pB - self.pA, self.pS1 - self.pA))
+        print("B = ", angle_between_vectors(self.pS2 - self.pB, self.pA - self.pB))
+        print("C = ", angle_between_vectors(self.pB - self.pS2, self.pS1 - self.pS2))
+        print("D = ", angle_between_vectors(self.pS2 - self.pS1, self.pA - self.pS1))
+
+        # Check at den udrenger noget forkert:
+        print('link length:', np.sum(dL.T @ dL) ** 0.5, " should be: ", self.side_link)
