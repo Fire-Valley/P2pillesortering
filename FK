@@ -177,15 +177,16 @@ L = {
         'wrist': {'l': 75}
     }
 
-# DH parameters for each joint with symbolic values for theta
+# DH parameters for each joint with values for theta
 dh_params = [
-    {'theta': 68, 'd': L['world']['l'] + L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
-    {'theta': 104+90, 'd': L['lower_arm']['l'], 'a': 0, 'alpha': -np.pi / 2},
-    {'theta': (183+(104+90))-90, 'd': L['upper_arm']['l'] , 'a': 0, 'alpha': 0},
-    {'theta': 177, 'd': 0, 'a': L['elbow']['l'], 'alpha': -np.pi / 2},
-    {'theta': 86, 'd': 0, 'a': 0, 'alpha': np.pi / 2},
-    {'theta': 67, 'd': L['wrist']['l'], 'a': 0, 'alpha': -np.pi / 2}
+    {'theta': 0, 'd': L['world']['l'] + L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
+    {'theta': 0, 'd': L['lower_arm']['l'], 'a': 0, 'alpha': -np.pi / 2},
+    {'theta': 0, 'd': L['upper_arm']['l'] , 'a': 0, 'alpha': 0},
+    {'theta': 0, 'd': 0, 'a': L['elbow']['l'], 'alpha': -np.pi / 2},
+    {'theta': 0, 'd': 0, 'a': 0, 'alpha': np.pi / 2},
+    {'theta': 0, 'd': L['wrist']['l'], 'a': 0, 'alpha': -np.pi / 2}
 ]
+
 
 # The overall transformation matrix
 T = sp.eye(4)
