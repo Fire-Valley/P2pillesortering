@@ -1,9 +1,9 @@
 import numpy as np
-from Inverse_zero_position import theta1_deg, theta2_deg
 
-# Define the lengths of the robot arm segments
+# Længder på de forskellige dele af robotten
 L = {
     'world': {'l': 90},
+    'hop': {'l': 45},
     'base': {'l': 45},
     'lower_arm': {'l': 95},
     'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
@@ -11,91 +11,95 @@ L = {
     'upper_arm': {'l': 175},
     'wrist': {'l': 70}
 }
+# Dette er vores DH parameter taget fra vores Forward kinematik
+dh_params = [
+    {'theta': 0, 'd': L['world']['l'] + L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
+    {'theta': 0, 'd': L['lower_arm']['l'], 'a': 0, 'alpha': -np.pi / 2},
+    {'theta': 0, 'd': L['upper_arm']['l'], 'a': 0, 'alpha': 0},
+    {'theta': 0, 'd': 0, 'a': L['elbow']['l'], 'alpha': -np.pi / 2},
+    {'theta': 0, 'd': 0, 'a': 0, 'alpha': np.pi / 2},
+    {'theta': 0, 'd': L['wrist']['l'], 'a': 0, 'alpha': -np.pi / 2}
+]
 
-def geometric_inverse_kinematic_for_disp1_ud(desired_position, L):
+# Vi begynder at udregne vores theta værdier
+def geometric_inverse_kinematic(desired_position, L):
     x, y, z = desired_position
 
-    # Calculate theta1
+    # Udregning af theta1
     theta1_rad = np.arctan2(y, x)
     theta1_deg = np.degrees(theta1_rad)
 
     # Links
-    L1E = L['lower_arm']['l'] + L['elbow']['l']
-    L2W = L['upper_arm']['l'] + L['wrist']['l']
+    L1 = L['lower_arm']['l'] + L['elbow']['l']
+    L2 = L['upper_arm']['l'] + L['wrist']['l']
 
-    NewL = np.sqrt(y ** 2 + z ** 2)
-    L3 = np.sqrt(L1E ** 2 - 50 ** 2)
+    #ystart er en målt værdi
+    ystart = 200
 
-    theta2_rad1 = np.arccos((L3 ** 2 + NewL ** 2 - L2W ** 2) / (2 * NewL * L3))
-    theta2_rad2 = np.cos(y / NewL)
-    theta2_rad = theta2_rad1 + theta2_rad2
-    theta2_deg = 180 - (np.degrees(theta2_rad))
+    nyy = desired_position[1] - ystart
 
-    theta3_rad = np.arccos((L2W ** 2 + L3 ** 2 - NewL ** 2) / (2 * L2W * L3))
-    theta3_deg = np.degrees(theta3_rad)
-    theta3_deg += theta2_deg
+    # Vi udregner og bestemmer hvilken vej vores arm skal bevæge sig.
+    if desired_position[1] > ystart:
+        L4 = np.sqrt(((ystart + nyy))**2 + (L1**2))
+    else:
+        L4 = np.sqrt(((ystart - nyy))**2 + (L1**2))
 
-    theta4_deg = 180
-    theta5_deg = 80
-    theta6_deg = 70
+    # Udregning af L3 - Hypotenusen
+    L3 = np.sqrt(L4 ** 2 + L2 ** 2)
+
+    # Udregning af theta 2
+    theta2_rad = np.arccos((L4**2 + L3**2 - L2**2) / (2 * L4 * L3))
+    theta2_deg = np.degrees(theta2_rad)
+
+    #Theta3 får vi fra vores forward kinematik program
+    theta3_deg = 65
+    theta3_rad = np.radians(theta3_deg)
+
+    #Opstilling af den totale transformations matrix.
+    def transformation_matrix(d, a, alpha, theta):
+        return np.array([
+            [np.cos(theta), -np.sin(theta), 0, a],
+            [np.sin(theta) * np.cos(alpha), np.cos(theta) * np.cos(alpha), -np.sin(alpha), np.sin(alpha) * d],
+            [np.sin(theta) * np.sin(alpha), np.cos(theta) * np.sin(alpha), np.cos(alpha), np.cos(alpha) * d],
+            [0, 0, 0, 1]
+        ])
+
+    #Vi bestemmer de tre første rækker af vores DH og ganger dem sammen
+    T01 = transformation_matrix(L['world']['l'] + L['hop']['l'], L['base']['l'], 0, theta1_rad)
+    T12 = transformation_matrix(L['lower_arm']['l'], 0, -np.pi / 2, theta2_rad)
+    T23 = transformation_matrix(L['upper_arm']['l'], 0, 0, theta3_rad)
+
+    T03 = T01 @ T12 @ T23
+
+    # Vi bestemmer vores transformation for alle vores DH parametere og fjerner T03 så vi kune har T36W tilbage
+    T06W = [transformation_matrix(d['d'],d['a'], d['alpha'],d['theta']) for d in dh_params]
+
+    T36W = np.linalg.inv(T03) @ T06W
+
+    #Udregning af theta 4, 5 og 6
+    theta5_rad = np.arccos(T36W[2][3])
+    theta5_deg = np.degrees(theta5_rad)
+
+    theta4_rad = np.arctan2(T36W[1][3] * np.sin(theta5_rad), -T36W[0][3] * np.sin(theta5_rad))
+    theta4_deg = np.degrees(theta4_rad)
+
+    theta6_rad = np.arctan2(-T36W[2][1] * np.sin(theta5_rad), T36W[2][0] * np.sin(theta5_rad))
+    theta6_deg = np.degrees(theta6_rad)
+
 
     return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
 
-def geometric_inverse_kinematic_for_disp1_ind(desired_position, L):
-    x, y, z = desired_position
+# Definer desired position ud fra x, y og z værdier
+desired_position = (-105, 270, 105)
 
-    theta1_rad = np.arctan2(y, x)
-    theta1_deg = np.degrees(theta1_rad)
+# Udregning af inverse kinematik
+theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematic(desired_position, L)
 
-    # Links
-    L1E = L['lower_arm']['l'] + L['elbow']['l']
-    L2W = L['upper_arm']['l'] + L['wrist']['l']
-
-    NewL = np.sqrt(y**2 + z**2)
-    L3 = np.sqrt(L1E**2+130**2)
-
-    theta2_rad1 = np.arccos((L3**2 + NewL**2 - L2W**2) / (2 * NewL * L3))
-    theta2_rad2 = np.cos(y/NewL)
-    theta2_rad = theta2_rad1+theta2_rad2
-    theta2_deg = 180 - (np.degrees(theta2_rad))
-
-    theta3_rad = np.arccos((L2W**2 + L3**2 - NewL**2) / (2 * L2W * L3))
-    theta3_deg = np.degrees(theta3_rad)
-    theta3_deg += theta2_deg
-
-    theta4_deg = 180
-    theta5_deg = 80
-    theta6_deg = 70
-
-    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
-
-
-
-# Define the desired positions
-desired_position_ud = (105, 200, 80)
-desired_position_ind = (105, 250, 80)
-
-# Call the functions and store the results
-theta_values_ud = geometric_inverse_kinematic_for_disp1_ud(desired_position_ud, L)
-theta_values_ind = geometric_inverse_kinematic_for_disp1_ind(desired_position_ind, L)
-
-angles_clamped = [max(0, min(180, theta2_deg)) for theta2_deg in theta_values_ud]
-angles_clamped = [max(0, min(180, theta2_deg)) for theta2_deg in theta_values_ind]
-
-# Print for disp1_ud
-print("\nTheta values for disp1_ud:")
-print("Theta1 in Degrees:", theta_values_ud[0])
-print("Theta2 in Degrees:", theta_values_ud[1])
-print("Theta3 in Degrees:", theta_values_ud[2])
-print("Theta4 in Degrees:", theta_values_ud[3])
-print("Theta5 in Degrees:", theta_values_ud[4])
-print("Theta6 in Degrees:", theta_values_ud[5])
-
-# Print for disp1_ind
-print("\nTheta values for disp1_ind:")
-print("Theta1 in Degrees:", theta_values_ind[0])
-print("Theta2 in Degrees:", theta_values_ind[1])
-print("Theta3 in Degrees:", theta_values_ind[2])
-print("Theta4 in Degrees:", theta_values_ind[3])
-print("Theta5 in Degrees:", theta_values_ind[4])
-print("Theta6 in Degrees:", theta_values_ind[5])
+# Print for theta værdierne
+print("Theta values for Inverse Kinematic:")
+print("Theta1 in Degrees:", theta1_deg)
+print("Theta2 in Degrees:", theta2_deg)
+print("Theta3 in Degrees:", theta3_deg)
+print("Theta4 in Degrees:", theta4_deg)
+print("Theta5 in Degrees:", theta5_deg)
+print("Theta6 in Degrees:", theta6_deg)
