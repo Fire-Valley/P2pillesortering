@@ -1,3 +1,4 @@
+
 import numpy as np
 
 # Længder på de forskellige dele af robotten
@@ -33,11 +34,15 @@ def geometric_inverse_kinematic(desired_position, L):
     L1 = L['lower_arm']['l'] + L['elbow']['l']
     L2 = L['upper_arm']['l'] + L['wrist']['l']
 
-    # Udregning af theta 2
+    # Udregn theta 2
     nyx = x-L1
     nyz = z-L['world']['l']
     theta2_rad = np.arccos((L2**2 + np.sqrt(nyx**2+nyz**2)**2 - L2**2) / (2 * L1 * np.sqrt(nyx**2+nyz**2))) + np.arctan2((z-L['world']['l']), x-L['hop']['l'])
     theta2_deg = np.degrees(theta2_rad)-90
+
+    #Theta3 får vi fra vores forward kinematik program
+    theta3_deg = 11.58
+    theta3_rad = np.radians(theta3_deg)
 
     #Opstilling af den totale transformations matrix.
     def transformation_matrix(d, a, alpha, theta):
@@ -60,30 +65,66 @@ def geometric_inverse_kinematic(desired_position, L):
 
     T36W = np.linalg.inv(T03) @ T06W
 
-    #Udregning af theta 4, 5 og 6
-    theta5_rad = np.arccos(T36W[1][2])
-    theta5_deg = np.degrees(theta5_rad)
+    # Udregning af theta 4, 5 og 6 - begge løsninger
+    theta5_rad_1 = np.arccos(T36W[1][2])
+    theta5_rad_2 = -theta5_rad_1  # Spejlvendt løsning
 
-    theta4_rad = np.arctan2(T36W[2][2] * np.sin(theta5_rad), -T36W[0][2] * np.sin(theta5_rad))
-    theta4_deg = np.degrees(theta4_rad)
+    # Første løsning
+    theta4_rad_1 = np.arctan2(T36W[2][2] * np.sin(theta5_rad_1), -T36W[0][2] * np.sin(theta5_rad_1))
+    theta6_rad_1 = np.arctan2(-T36W[1][1] * np.sin(theta5_rad_1), T36W[1][0] * np.sin(theta5_rad_1))
 
-    theta6_rad = np.arctan2(-T36W[1][1] * np.sin(theta5_rad), T36W[1][0] * np.sin(theta5_rad))
-    theta6_deg = np.degrees(theta6_rad)
+    # Anden løsning
+    theta4_rad_2 = np.arctan2(T36W[2][2] * np.sin(theta5_rad_2), -T36W[0][2] * np.sin(theta5_rad_2))
+    theta6_rad_2 = np.arctan2(-T36W[1][1] * np.sin(theta5_rad_2), T36W[1][0] * np.sin(theta5_rad_2))
 
+    # Konverter til grader
+    theta4_deg_1 = np.degrees(theta4_rad_1)
+    theta5_deg_1 = np.degrees(theta5_rad_1)
+    theta6_deg_1 = np.degrees(theta6_rad_1)
 
-    return theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg
+    theta4_deg_2 = np.degrees(theta4_rad_2)
+    theta5_deg_2 = np.degrees(theta5_rad_2)
+    theta6_deg_2 = np.degrees(theta6_rad_2)
+
+    return (float(theta1_deg), float(theta2_deg), float(theta3_deg),
+            (float(theta4_deg_1), float(theta4_deg_2)),
+            (float(theta5_deg_1), float(theta5_deg_2)),
+            (float(theta6_deg_1), float(theta6_deg_2)))
+
 
 # Definer desired position ud fra x, y og z værdier
-desired_position = (-105, 200, 105)
+desired_position = (-105, 270, 105)
+
+def convert_to_servo_range(theta_deg):
+    return max(0, min(180, theta_deg + 90))
 
 # Udregning af inverse kinematik
 theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematic(desired_position, L)
+
+# Konvertering af theta værdier
+theta1_servo = convert_to_servo_range(theta1_deg)
+theta2_servo = convert_to_servo_range(theta2_deg)
+theta3_servo = convert_to_servo_range(theta3_deg)
+theta4_servo_1 = convert_to_servo_range(theta4_deg[0])
+theta4_servo_2 = convert_to_servo_range(theta4_deg[1])
+theta5_servo_1 = convert_to_servo_range(theta5_deg[0])
+theta5_servo_2 = convert_to_servo_range(theta5_deg[1])
+theta6_servo_1 = convert_to_servo_range(theta6_deg[0])
+theta6_servo_2 = convert_to_servo_range(theta6_deg[1])
 
 # Print for theta værdierne
 print("Theta values for Inverse Kinematic:")
 print("Theta1 in Degrees:", theta1_deg)
 print("Theta2 in Degrees:", theta2_deg)
 print("Theta3 in Degrees:", theta3_deg)
-print("Theta4 in Degrees:", theta4_deg)
+print("Theta4 in Degrees: ", theta4_deg)
 print("Theta5 in Degrees:", theta5_deg)
 print("Theta6 in Degrees:", theta6_deg)
+
+print("\nConverted Theta values for Servo Range [0–180]:")
+print("Theta1 Servo:", theta1_servo)
+print("Theta2 Servo:", theta2_servo)
+print("Theta3 Servo:", theta3_servo)
+print("Theta4 Servo: ", (theta4_servo_1, theta4_servo_2))
+print("Theta5 Servo:", (theta5_servo_1, theta5_servo_2))
+print("Theta6 Servo:", (theta6_servo_1, theta6_servo_2))
