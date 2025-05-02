@@ -33,27 +33,11 @@ def geometric_inverse_kinematic(desired_position, L):
     L1 = L['lower_arm']['l'] + L['elbow']['l']
     L2 = L['upper_arm']['l'] + L['wrist']['l']
 
-    #ystart er en målt værdi
-    ystart = 200
-
-    nyy = desired_position[1] - ystart
-
-    # Vi udregner og bestemmer hvilken vej vores arm skal bevæge sig.
-    if desired_position[1] > ystart:
-        L4 = np.sqrt(((ystart + nyy))**2 + (L1**2))
-    else:
-        L4 = np.sqrt(((ystart - nyy))**2 + (L1**2))
-
-    # Udregning af L3 - Hypotenusen
-    L3 = np.sqrt(L4 ** 2 + L2 ** 2)
-
     # Udregning af theta 2
-    theta2_rad = np.arccos((L4**2 + L3**2 - L2**2) / (2 * L4 * L3))
-    theta2_deg = np.degrees(theta2_rad)
-
-    #Theta3 får vi fra vores forward kinematik program
-    theta3_deg = 11.58
-    theta3_rad = np.radians(theta3_deg)
+    nyx = x-L1
+    nyz = z-L['world']['l']
+    theta2_rad = np.arccos((L2**2 + np.sqrt(nyx**2+nyz**2)**2 - L2**2) / (2 * L1 * np.sqrt(nyx**2+nyz**2))) + np.arctan2((z-L['world']['l']), x-L['hop']['l'])
+    theta2_deg = np.degrees(theta2_rad)-90
 
     #Opstilling af den totale transformations matrix.
     def transformation_matrix(d, a, alpha, theta):
