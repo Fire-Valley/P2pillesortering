@@ -1,171 +1,9 @@
-import numpy as np
-import json 
-import matplotlib.pyplot as plt
-from spatialmath.timing import result
-
-
-class robot_arm:
-    L = json.load(open(r"C:\Users\alexa\Downloads\micRoBot\lengths.json"))
-    
-    def __init__(self, xlim = [-300, 300], ylim = [-300, 300], zlim = [0, 500]):
-        self.limits = [xlim, ylim, zlim]
-    
-    def forward_kinematics(self, q):
-        """
-        Args:
-            q (_type_): angles of the joints
-        """
-        
-        """ROBOT:
-
-
-    E->  O------||   <-- D 
-                  O  <-- C             
-                 / 
-                /
-        B-->   O__   
-               \  \ 
-                ====  <- A
-                |__| 
-        """        
-        self.q = q
-        # c(q1)*self.L['lower_arm']['l'] - c(q1+q2)*self.L['upper_arm']['l'] + c(q1+q2+q3)*self.L['wrist']['l']
-        a = self.find_joint3(q)
-        #print(a*180/np.pi, b*180/np.pi)
-        
-        
-        self.T0 = self._Rz(q[0]) @ self._T( 0, 0, self.L['world']['l']) 
-        self.pA = self.T0[:3,3]
-        
-        self.T1 = self._T(self.L['base']['l'],0,0) @ self._Ry(q[1])
-        Tb = self.T0@self.T1
-        self.pB = Tb[:3,3]
-
-        Ts1 = self.T0 @ self._T(self.L['base']['l'],0,0)  @ self._Ry(q[2])@self._T (0, 0, self.L['parallel_arm']['s1'])
-        self.pS1 = Ts1[:3, 3]
-        
-        self.T2 =  self._T (0, 0, self.L['lower_arm']['l']) @ self._Ry(a) 
-        Tc = Tb@self.T2
-        self.pC = Tc[:3,3]
-        
-        Ts2 = Tb@self._T (0, 0, self.L['lower_arm']['l']) @ self._Ry(a) @ self._T (0, 0, -self.L['parallel_arm']['s2']) 
-        self.pS2 = Ts2[:3, 3]
-               
-
-        self.T3 = self._T(-self.L['elbow']['l'], 0, 0) @ self._Rz(q[3])
-        Td = Tc@self.T3
-        self.pD = Td[:3,3]
-        
-        
-                                
-        self.T4 = self._T(0, 0, self.L['upper_arm']['l']) @ self._Ry(q[4])
-        self.T5 = self._Rz(q[5]) @ self._T(0,0, self.L['wrist']['l'])
-        self.T = Td @ self.T4 @ self.T5
-        self.pE = self.T[:3,3]
-
-        return self.T
-    
-    def find_joint3(self, q):
-        theta_1 = q[1] - q[2]
-        l1 = self.L['lower_arm']['l']
-        d1 = self.L['parallel_arm']['s1']
-        l2 = self.L['parallel_arm']['l']
-        d2 = self.L['parallel_arm']['s2']
-        
-        """         o
-             d2  .' :  
-              .'    :
-            o       :
-            .       :L2
-            .       : 
-            . L1    :
-            .       o
-            .     . 
-            .   . d1
-            . . 
-            o
-        """
-        x = (d1**2 + l1**2 - 2*d1*l1*np.cos(theta_1))**0.5 # Cosine rule
-        phi_2 = np.arccos((d2**2 + x**2 - l2**2)/(2*d2*x)) # Cosine rule
-        phi_1 = np.arcsin(np.sin(theta_1)*d1/x) # Sine rule
-        
-        return phi_1+phi_2
-        
-    def plot_robot(self):
-        ax = plt.figure().add_subplot(projection='3d')
-
-        ax.plot([0,self.pA[0], self.pB[0], self.pC[0], self.pD[0], self.pE[0]], [0, self.pA[1], self.pB[1], self.pC[1], self.pD[1], self.pE[1]], [0,self.pA[2], self.pB[2], self.pC[2], self.pD[2], self.pE[2]], 'b') 
-        ax.plot([self.pB[0], self.pS1[0], self.pS2[0], self.pC[0]], [self.pB[1], self.pS1[1], self.pS2[1], self.pC[1]], [self.pB[2], self.pS1[2], self.pS2[2], self.pC[2]], 'ro-')
-        
-        dS = self.pS1-self.pS2
-        
-        for i, c in enumerate(['r', 'b', 'g']) : 
-            ax.quiver(self.pE[0], self.pE[1], self.pE[2], self.T[0,i], self.T[1,i], self.T[2,i] , length=20, color=c)
-        
-        ax.set_xlim(self.limits[0])
-        ax.set_ylim(self.limits[1])
-        ax.set_zlim(self.limits[2])
-        plt.show()
-                
-    def _Rx(self, theta):
-        return np.array([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], [0, np.sin(theta), np.cos(theta), 0], [0,0,0,1]])
-    def _Ry(self, theta):
-        return np.array([[np.cos(theta), 0, np.sin(theta), 0], [0, 1, 0, 0], [-np.sin(theta), 0, np.cos(theta), 0], [0,0,0,1]])
-    def _Rz(self, theta):
-        return np.array([[np.cos(theta), -np.sin(theta), 0, 0], [np.sin(theta), np.cos(theta), 0, 0], [0, 0, 1, 0], [0,0,0,1]])
-    def _T(self, x, y, z):
-        return np.array([[1, 0, 0, x], [0, 1, 0, y], [0, 0, 1, z], [0,0,0,1]])
-
-if __name__ == '__main__':
-    robot = robot_arm()
-    T_dumb = robot.forward_kinematics(np.array([0,20,-90,0,0,0])*np.pi/180)
-    robot.plot_robot()
-    
-    ## Plot limited workspace:
-    #min_angle = np.array([-90, -45, -150, -90, -90, -90])*np.pi/180
-    #max_angle = np.array([90, 135, 30, 90, 90, 90])*np.pi/180
-    #q12min = 65; 
-    #q12max = 180; 
-    #dots = []
-    #angle = []
-    #for q1 in np.linspace(min_angle[1], max_angle[1], 200):
-    #    for q2 in np.linspace(min_angle[2] , max_angle[2], 200):
-    #        if q1-q2 > q12min or q1-q2 < q12max:
-    #            T = robot.forward_kinematics(np.array([0,q1,q2,0,0,0]))
-    #            angle.append(q1-q2)
-    #            dots.append(T[:3,3])
-    
-    #for d, a in zip(dots, angle):
-    #    plt.plot(d[0] , d[2], 'o', color= [np.abs(a/(2*np.pi)),0,0])
-    #plt.show()
-
-
 import sympy as sp
 import numpy as np
+import matplotlib.pyplot as plt
 # Define joint angles as symbolic variables
-theta1, theta2, theta3, theta4, theta5, theta6 = sp.symbols('theta1 theta2 theta3 theta4 theta5 theta6')
+#theta1, theta2, theta3, theta4, theta5, theta6 = sp.symbols('theta1 theta2 theta3 theta4 theta5 theta6')
 
-def dh_transformation_matrix(theta, d, a, alpha):
-    """
-    Calculate the DH transformation matrix using symbolic mathematics.
-
-    Parameters:
-        theta: Angle around the z-axis (in radians)
-        d: Distance along the z-axis
-        a: Distance along the x-axis
-        alpha: Angle around the x-axis (in radians)
-
-    Returns:
-        A 4x4 transformation matrix
-    """
-    return sp.Matrix([
-        [np.cos(theta), -np.sin(theta), 0, a],
-        [np.sin(theta) * np.cos(alpha), np.cos(theta) * np.cos(alpha), -np.sin(alpha), np.sin(alpha)*d],
-        [np.sin(theta) * np.sin(alpha), np.cos(theta) * np.sin(alpha), np.cos(alpha), np.cos(alpha)*d],
-        [0, 0, 0, 1]
-    ])
-
-# Example usage with DH parameters
 L = {
         'world': {'l': 90},
         'hop': {'l': 45},
@@ -179,25 +17,117 @@ L = {
 
 # DH parameters for each joint with values for theta
 dh_params = [
-    {'theta': 0, 'd': L['world']['l'] + L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
-    {'theta': 0, 'd': L['lower_arm']['l'], 'a': 0, 'alpha': -np.pi / 2},
+    {'theta': 0, 'd': L['world']['l'], 'a': 0, 'alpha': 0},
+    {'theta': 0, 'd': L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
+    {'theta': 0, 'd': L['lower_arm']['l'], 'a': 0, 'alpha': -90},
     {'theta': 0, 'd': L['upper_arm']['l'] , 'a': 0, 'alpha': 0},
-    {'theta': 0, 'd': 0, 'a': L['elbow']['l'], 'alpha': -np.pi / 2},
-    {'theta': 0, 'd': 0, 'a': 0, 'alpha': np.pi / 2},
-    {'theta': 0, 'd': L['wrist']['l'], 'a': 0, 'alpha': -np.pi / 2}
+    {'theta': 0, 'd': 0, 'a': L['elbow']['l'], 'alpha': 90},
+    {'theta': 0, 'd': 0, 'a': 0, 'alpha': 90},
+    {'theta': 0, 'd': 0, 'a': 0, 'alpha': -90},
+    {'theta': 0, 'd': L['wrist']['l'], 'a': 0, 'alpha': 0}
 ]
 
-
-# The overall transformation matrix
-T = sp.eye(4)
-for params in dh_params:
-    T = T * dh_transformation_matrix(**params)
-
-print("Overall Transformation Matrix (Base to End-Effector) with symbolic mathematics:")
-# Simplify the matrix for better readability
-T_simplified = sp.simplify(T)
-
-print("Simplified Overall Transformation Matrix (Base to End-Effector):")
-sp.pprint(T_simplified, num_columns = 250, wrap_line = False)
+theta1 = 120
+theta2 = 110
+theta3 = 90
+theta4 = 110
+theta5 = 90
+theta6 = 90
 
 
+TB0 = np.array([[1,0,0,0],
+                [0,1,0,0],
+                [0,0,1,90],
+                [0,0,0,1]])
+
+T01 = np.array([[np.cos(theta1), -np.sin(theta1), 0, 45],
+                [np.sin(theta1), np.cos(theta1), 0, 0],
+                [0, 0, 1, 45],
+                [0, 0, 0, 1]])
+
+T12 = np.array([[np.cos(theta2+90), -np.sin(theta2+90), 0, 0],
+                [np.sin(theta2+90), np.cos(theta2+90),0,0],
+                [0, 0, 1, 95],
+                [0,0,0,1]])
+
+T23 = np.array([[np.cos(theta3), -np.sin(theta3), 0, 0],
+                [np.sin(theta3), np.cos(theta3), 0, 0],
+                [0, 0, 1, 157],
+                [0,0,0,1]])
+
+T34 = np.array([[1,0, 0, 18],
+                [0, np.cos(theta4), -np.sin(theta4), 0],
+                [0, np.sin(theta4), np.cos(theta4), 0],
+                [0, 0, 0, 1]])
+
+T45 = np.array([[np.cos(theta5), -np.sin(theta5), 0, 0],
+                [np.sin(theta5), np.cos(theta5), 0, 0],
+                [0, 0, 1, 0],
+                [0,0,0,1]])
+
+T56 = np.array([[1,0, 0, 0],
+                [0, np.cos(theta6), -np.sin(theta6), 0],
+                [0, np.sin(theta6), np.cos(theta6), 0],
+                [0, 0, 0, 1]])
+
+T6W = np.array([[1, 0, 0, 0],
+                [0,1,0,0],
+                [0,0,1,75],
+                [0,0,0,1]])
+
+TBW = TB0 @ T01 @ T12 @ T23 @ T34 @ T45 @ T56 @ T6W
+print (TBW)
+
+def dh_transformation_matrix(theta, d, a, alpha):
+    theta = theta * np.pi/180; alpha = alpha * np.pi/180
+
+    return np.array([
+        [np.cos(theta), -np.sin(theta), 0, a],
+        [np.sin(theta) * np.cos(alpha), np.cos(theta) * np.cos(alpha), -np.sin(alpha), -np.sin(alpha)*d],
+        [np.sin(theta) * np.sin(alpha), np.cos(theta) * np.sin(alpha), np.cos(alpha), np.cos(alpha)*d],
+        [0, 0, 0, 1]
+    ])
+"""
+TB0 = dh_transformation_matrix(0, L['world']['l'], 0,  0)
+T01 = dh_transformation_matrix(120, L['hop']['l'], L['base']['l'], 0)
+T12 = dh_transformation_matrix(110, L['lower_arm']['l'], 0, -90)
+T23 = dh_transformation_matrix(90, L['upper_arm']['l'], 0, 0)
+T34 = dh_transformation_matrix(110, 0, L['elbow']['l'], -90)
+T45 = dh_transformation_matrix(90, 0, 0, 90)
+T56 = dh_transformation_matrix(90, 0, 0, -90)
+T6W = dh_transformation_matrix(0, L['wrist']['l'], 0, 0)
+"""
+TB0 = dh_transformation_matrix(0, 90, 0,  0)
+T01 = dh_transformation_matrix(113, 45, 0, 0)
+T12 = dh_transformation_matrix(90, 0, 45, 90)
+T23 = dh_transformation_matrix(0, 0, 95, 0)
+T34 = dh_transformation_matrix(0, 157, 18, 90)
+T45 = dh_transformation_matrix(0, 0, 0, -90)
+T56 = dh_transformation_matrix(0, L['wrist']['l'], 0, 90)
+T6W = dh_transformation_matrix(0, 0, 0, 0)
+
+T = TB0
+X = [TB0[0,3]]
+Y = [TB0[0,3]]
+Z = [TB0[2,3]]
+for _T in [T01, T12, T23, T34, T45, T56, T6W]:
+    T = T@_T
+    print("joints: " , T)
+    X.append(T[0,3])
+    Y.append(T[1,3])
+    Z.append(T[2,3])
+ax = plt.axes(projection='3d')
+ax.plot(X, Y, Z)
+ax.plot(X[0], Y[0], Z[0], 'ro')
+
+plt.show()
+
+T06 = T01 @ T12 @ T23 @ T34 @ T45 @ T56
+TBW = TB0 @ T06 @ T6W
+
+#np.pprint(TBW, num_columns = 250, wrap_line = False)
+#T02 = TB0 @ T01 @ T12
+print (TBW[:3,3])
+
+print(" Lxy = ", (TBW[0,3]**2 + TBW[1,3]**2)**0.5 )
+print(" Lxy = ", (270**2 + (-105**2))**0.5 )
