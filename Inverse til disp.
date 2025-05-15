@@ -12,6 +12,7 @@ L = {
     'wrist': {'l': 75}
 }
 theta1, theta2, theta3, theta4, theta5, theta6 = sp.symbols('theta1 theta2 theta3 theta4 theta5 theta6')
+
 # Dette er vores DH parameter taget fra vores Forward kinematik
 dh_params = [
     {'theta': 0, 'd': L['world']['l'], 'a': 0, 'alpha': 0},
@@ -40,7 +41,7 @@ def geometric_inverse_kinematic(desired_position, L):
     L0 = (x**2 + y**2)**0.5
     a = L0-45
     b = z-135
-    theta2_rad = np.arccos((L1**2 + (np.sqrt(a**2+b**2))**2 - L2**2) / (2 * L1 * np.sqrt(a**2+b**2))) + np.arctan2(z-135, L0-45) -np.pi/2
+    theta2_rad = np.arccos((L1**2 + (np.sqrt(a**2+b**2))**2 - L2**2) / (2 * L1 * np.sqrt(a**2+b**2))) + np.arctan2(z-135, L0-45)
     theta2_deg = np.degrees(theta2_rad)
 
     #Udregning af Theta 3
@@ -55,11 +56,12 @@ def geometric_inverse_kinematic(desired_position, L):
     # 6.54 er et offset på Theta 3
     theta3_deg -= 6.54
     theta3_rad = np.radians(theta3_deg)
-    #Udregning af Theta 4, 5 og 6 med roll, pitch og yaw
 
-    roll = -90  # Gamma
-    pitch = 70   # Beta
-    yaw = 0      # Alpha
+
+    #Udregning af Theta 4, 5 og 6 med roll, pitch og yaw
+    roll = 0        # Gamma
+    pitch = 0   # Beta
+    yaw = 0    # Alpha
 
 
     Rz = np.array([
@@ -157,10 +159,7 @@ def geometric_inverse_kinematic(desired_position, L):
 
 
 # Definer desired position ud fra x, y, z og vores roll, pitch og yaw
-desired_position = (190, 0, 80)
-
-def convert_to_servo_range(theta_deg):
-    return max(0, min(180, theta_deg + 90))
+desired_position = (272, 127, 103)
 
 # Udregning af inverse kinematik
 theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematic(desired_position, L)
