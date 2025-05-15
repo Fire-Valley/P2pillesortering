@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as sp
+
 # Længder på de forskellige dele af robotten
 L = {
     'world': {'l': 90},
@@ -18,18 +19,18 @@ dh_params = [
     {'theta': 0, 'd': L['world']['l'], 'a': 0, 'alpha': 0},
     {'theta': 0, 'd': L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
     {'theta': 0, 'd': 0, 'a': L['lower_arm']['l'], 'alpha': -90},
-    {'theta': 0, 'd': L['upper_arm']['l'] , 'a': 0, 'alpha': 0},
+    {'theta': 0, 'd': L['upper_arm']['l'], 'a': 0, 'alpha': 0},
     {'theta': 0, 'd': 0, 'a': L['elbow']['l'], 'alpha': 90},
     {'theta': 0, 'd': 0, 'a': 0, 'alpha': 90},
     {'theta': 0, 'd': 0, 'a': 0, 'alpha': -90},
     {'theta': 0, 'd': L['wrist']['l'], 'a': 0, 'alpha': 0}
 ]
 
-# Vi begynder at udregne vores Theta værdier
-def geometric_inverse_kinematic(desired_position, R, R36, L):
 
+# Vi begynder at udregne vores Theta værdier
+def geometric_inverse_kinematic(desired_position, R, R03, L):
     x_end, y_end, z_end = desired_position
-    point_offset = R@np.array([0,0,-L['wrist']['l']])
+    point_offset = R @ np.array([0, 0, -L['wrist']['l']])
     x = x_end + point_offset[0]
     y = y_end + point_offset[1]
     z = z_end + point_offset[2]
@@ -39,29 +40,29 @@ def geometric_inverse_kinematic(desired_position, R, R36, L):
     theta1_deg = np.degrees(theta1_rad)
 
     # Links
-    L1 = L['lower_arm']['l'] #+ L['elbow']['l']
-    L2 = L['upper_arm']['l'] #+ L['wrist']['l']
+    L1 = L['lower_arm']['l']  # + L['elbow']['l']
+    L2 = L['upper_arm']['l']  # + L['wrist']['l']
 
     # Udregn Theta 2
-    L0 = (x**2 + y**2)**0.5
-    a = L0-45
-    b = z-135
-    d = np.sqrt(a**2+b**2) # hypertenusen
-    theta2_rad = np.arccos((L1**2 + d**2- L2**2) / (2 * L1 * d)) + np.arctan2(b, a)
+    L0 = (x ** 2 + y ** 2) ** 0.5
+    a = L0 - 45
+    b = z - 135
+    d = np.sqrt(a ** 2 + b ** 2)  # hypertenusen
+    theta2_rad = np.arccos((L1 ** 2 + d ** 2 - L2 ** 2) / (2 * L1 * d)) + np.arctan2(b, a)
     theta2_deg = np.degrees(theta2_rad)
 
-    #Udregning af Theta 3
-    Nya = a #L0
+    # Udregning af Theta 3
+    Nya = a  # L0
     Nyb = b
-    NyL2 = (18**2+157**2)**0.5
-    c = d #(Nya**2+Nyb**2)**0.5
-    C = np.clip((95**2 + NyL2**2 - c**2)/(2*95*NyL2), -1, 1)
-    Tre = 90-np.degrees(np.arccos(18/NyL2))
+    NyL2 = (18 ** 2 + 157 ** 2) ** 0.5
+    c = d  # (Nya**2+Nyb**2)**0.5
+    C = np.clip((95 ** 2 + NyL2 ** 2 - c ** 2) / (2 * 95 * NyL2), -1, 1)
+    Tre = 90 - np.degrees(np.arccos(18 / NyL2))
     theta3_deg = np.degrees(np.arccos(C)) - Tre - 90
-    #theta3_deg = 90 - theta3_deg
+    # theta3_deg = 90 - theta3_deg
     # 6.54 er et offset på Theta 3
-    #theta3_deg -= 6.54
-    #theta3_rad = np.radians(theta3_deg)
+    # theta3_deg -= 6.54
+    # theta3_rad = np.radians(theta3_deg)
     print(Tre, C)
     """
     #Udregning af Theta 4, 5 og 6 med roll, pitch og yaw
@@ -89,7 +90,7 @@ def geometric_inverse_kinematic(desired_position, R, R36, L):
     ])
 
     R = Rz @ Ry @ Rx
-    
+
     #Opstilling af den totale transformations matrix.
     def transformation_matrix(d, a, alpha, theta):
         return np.array([
@@ -134,24 +135,22 @@ def geometric_inverse_kinematic(desired_position, R, R36, L):
     print ("Gamma:", np.degrees(Gamma))
     """
 
-
     # Udregning af theta 4, 5 og 6 - begge løsninger
-    #theta5_rad_1 = np.arccos(RotMax[1][2])
-    #theta5_rad_2 = -theta5_rad_1  # Spejlvendt løsning
+    # theta5_rad_1 = np.arccos(RotMax[1][2])
+    # theta5_rad_2 = -theta5_rad_1  # Spejlvendt løsning
 
+    RotMax = np.linalg.inv(R03) @ R
 
-    RotMax = R03.T @ R
-
-    theta5sin = np.sqrt(RotMax[1, 0]**2 + RotMax[1, 1]**2)
+    theta5sin = np.sqrt(RotMax[1, 0] ** 2 + RotMax[1, 1] ** 2)
     theta5_rad_1 = np.arctan2(theta5sin, -RotMax[1, 2])
-    theta5_rad_2 = 0 #-theta5_rad_1  # Spejlvendt løsning
+    theta5_rad_2 = 0  # -theta5_rad_1  # Spejlvendt løsning
     # Første løsning
-    if(abs(theta5_rad_1) > 1e-3):
+    if (abs(theta5_rad_1) > 1e-3):
         theta4_rad_1 = np.arctan2(RotMax[2][2], RotMax[0][2])
-        theta6_rad_1 = np.arctan2(-RotMax[1][1] , RotMax[1][0] )
-    else: #singularity
-        theta4_rad_1 = 0 #np.arctan2(RotMax[2][2], RotMax[0][2])
-        theta6_rad_1 = np.arctan2(RotMax[2][0] , RotMax[2][1] )
+        theta6_rad_1 = np.arctan2(-RotMax[1][1], RotMax[1][0])
+    else:  # singularity
+        theta4_rad_1 = 0  # np.arctan2(RotMax[2][2], RotMax[0][2])
+        theta6_rad_1 = np.arctan2(RotMax[2][0], RotMax[2][1])
 
     # Anden løsning
     theta4_rad_2 = np.arctan2(RotMax[0][2] * -np.sin(theta5_rad_2), -RotMax[2][2] * np.sin(theta5_rad_2))
@@ -165,22 +164,24 @@ def geometric_inverse_kinematic(desired_position, R, R36, L):
     theta4_deg_2 = np.degrees(theta4_rad_2)
     theta5_deg_2 = np.degrees(theta5_rad_2)
     theta6_deg_2 = np.degrees(theta6_rad_2)
-    
+
     return (float(theta1_deg), float(theta2_deg), float(theta3_deg),
             (float(theta4_deg_1), float(theta4_deg_2)),
             (float(theta5_deg_1), float(theta5_deg_2)),
             (float(theta6_deg_1), float(theta6_deg_2)))
 
-# Definer desired position ud fra x, y, z og vores roll, pitch og yaw
-desired_position = [233.22, 81.41,  11.68] #(272, 127, 103)
-R = np.array([[-0.75387136,  0.39782668,  0.52288804],
- [ 0.39653278,  0.91005231, -0.12069195],
- [-0.52386995,  0.11635604, -0.84381369]]);
-R36 = np.array([[-0.71491113,  0.69358925, -0.08852133],
- [-0.17101007, -0.29619813, -0.93969262],
- [-0.67798055, -0.65665868,  0.33036609]]);
+
+# Definer desired position ud fra x, y, z og rotations matricer fra Forward Kinematik
+desired_position = [-149.02287359,  256.0248974,   334.67170314]
+R = np.array([[-0.85064097, -0.47863362, -0.21753114],
+ [ 0.03281818, -0.46128981,  0.88664236],
+ [-0.52472175,  0.74707534,  0.40809989]]);
+R03 = np.array([[ 2.95413704e-01,  4.91650966e-01,  8.19152044e-01],
+ [-4.21894492e-01, -7.02150347e-01,  5.73576436e-01],
+ [ 8.57167301e-01, -5.15038075e-01,  6.12323400e-17]]);
 # Udregning af inverse kinematik
-theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematic(desired_position, R, R36, L)
+theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematic(desired_position,
+                                                                                                     R, R03, L)
 
 # Print for theta værdierne
 print("Theta values for Inverse Kinematic:")
