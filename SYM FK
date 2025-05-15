@@ -32,21 +32,22 @@ def transformation_matrix(d, a, alpha_deg, theta):
         [sp.sin(theta) * sp.sin(alpha), sp.cos(theta) * sp.sin(alpha), sp.cos(alpha), sp.cos(alpha) * d],
         [0, 0, 0, 1]
     ])
+
 TB0 = transformation_matrix(0, L['world']['l'], 0, 0)
 T01 = transformation_matrix(L['world']['l'] + L['hop']['l'], L['base']['l'], 0, theta1)
-T12 = transformation_matrix(L['lower_arm']['l'], 0, -90, theta2)
+T12 = transformation_matrix(L['lower_arm']['l'], 0, 90, theta2)
 T23 = transformation_matrix(L['upper_arm']['l'], 0, 0, theta3)
 T34 = transformation_matrix(0, L['elbow']['l'], 90, theta4)
-T45 = transformation_matrix(0, 0, 90, theta5)
-T56 = transformation_matrix(0, 0, -90, theta6)
+T45 = transformation_matrix(0, 0, -90, theta5)
+T56 = transformation_matrix(0, 0, 90, theta6)
 T6W = transformation_matrix(L['wrist']['l'], 0, 0, 0)
 
 #T06 = T01 * T12 * T23 * T34 * T45 * T56
 #TBW = TB0 * T06 * T6W
-#T03 = T01 * T12 * T23
+T36W = T01 * T12 * T23
 #T03_inv = T03.inv()
 #T36W = T03.inv() * TBW
-T36W = T34 @ T45 @ T56
+#T36W = T34 @ T45 @ T56
 #if T03.det() != 0:
     #T03_inv = T03.inv()
 #else:
