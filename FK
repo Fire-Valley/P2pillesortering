@@ -1,31 +1,17 @@
-import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
-# Define joint angles as symbolic variables
-#theta1, theta2, theta3, theta4, theta5, theta6 = sp.symbols('theta1 theta2 theta3 theta4 theta5 theta6')
 
+# Vi definere vores længder fra robotten / vores setup
 L = {
-        'world': {'l': 90},
-        'hop': {'l': 45},
-        'base': {'l': 45},
-        'lower_arm': {'l': 95},
-        'parallel_arm': {'l': 120, 's1': 30, 's2': 20},
-        'elbow': {'l': 18},
+        'world': {'l': 90}, #længde fra basen til theta 1
+        'hop': {'l': 45}, #Længde fra theta 1 til theta 2
+        'base': {'l': 45}, #Vandret længde fra 1 til 2
+        'lower_arm': {'l': 95}, #Armens længde
+        'parallel_arm': {'l': 120, 's1': 30, 's2': 20}, #Hingen (måske slet, vi ik bruge)
+        'elbow': {'l': 18}, # Hop fra lower arm til upper arm
         'upper_arm': {'l': 157},
-        'wrist': {'l': 75} #75
+        'wrist': {'l': 75} # Længden fra theta 5 til midten af end effektor
     }
-
-# DH parameters for each joint with values for theta
-dh_params = [
-    {'theta': 0, 'd': L['world']['l'], 'a': 0, 'alpha': 0},
-    {'theta': 0, 'd': L['hop']['l'], 'a': L['base']['l'], 'alpha': 0},
-    {'theta': 0, 'd': 0, 'a': L['lower_arm']['l'], 'alpha': -90},
-    {'theta': 0, 'd': L['upper_arm']['l'] , 'a': 0, 'alpha': 0},
-    {'theta': 0, 'd': 0, 'a': L['elbow']['l'], 'alpha': 90},
-    {'theta': 0, 'd': 0, 'a': 0, 'alpha': 90},
-    {'theta': 0, 'd': 0, 'a': 0, 'alpha': -90},
-    {'theta': 0, 'd': L['wrist']['l'], 'a': 0, 'alpha': 0}
-]
 
 def dh_transformation_matrix(theta, d, a, alpha):
     theta = theta * np.pi/180; alpha = alpha * np.pi/180
@@ -36,38 +22,40 @@ def dh_transformation_matrix(theta, d, a, alpha):
         [np.sin(theta) * np.sin(alpha), np.cos(theta) * np.sin(alpha), np.cos(alpha), np.cos(alpha)*d],
         [0, 0, 0, 1]
     ])
-
+#Vi ganger alle vores transformationer sammen ved at bruge vores dh_transformation_matrix
 TB0 = dh_transformation_matrix(0, 90, 0,  0)
-T01 = dh_transformation_matrix(125, 45, 0, 0)
-T12 = dh_transformation_matrix(50, 0, 45, 90)
-T23 = dh_transformation_matrix(71, 0, 95, 0)
+T01 = dh_transformation_matrix(25, 45, 0, 0)
+T12 = dh_transformation_matrix(32, 0, 45, 90)
+T23 = dh_transformation_matrix(0, 0, 95, 0)
 T34 = dh_transformation_matrix(105, 157, 18, 90)
 T45 = dh_transformation_matrix(20, 0, 0, -90)
 T56 = dh_transformation_matrix(120, L['wrist']['l'], 0, 90)
 T6W = dh_transformation_matrix(0, 0, 0, 0)
 
+
+#Vi laver matricer for x y og z og ganger den fulde transformation på dem for at plotte dem i 3D
 T = TB0
 X = [TB0[0,3]]
 Y = [TB0[0,3]]
 Z = [TB0[2,3]]
 for _T in [T01, T12, T23, T34, T45, T56, T6W]:
     T = T@_T
-    print("joints: " , T)
     X.append(T[0,3])
     Y.append(T[1,3])
     Z.append(T[2,3])
 ax = plt.axes(projection='3d')
 ax.plot(X, Y, Z)
 ax.plot(X[0], Y[0], Z[0], 'ro')
-
 plt.show()
 
+#Vi ganger alle transformationer sammen for at få den fulde transformation og vores punkt
 T06 = T01 @ T12 @ T23 @ T34 @ T45 @ T56
+#Her regner vi de første tre led
 T03 =  T01 @ T12 @ T23
+#Her tager vi basen og wristen med
 TBW = TB0 @ T06 @ T6W
+#Vi tager den inverse af T03 og ganger med T06 sådan at vi får T36
 T36 = np.linalg.inv(T03) @T06
-#np.pprint(TBW, num_columns = 250, wrap_line = False)
-#T02 = TB0 @ T01 @ T12
 print (TBW[:3,3])
 print (TBW[:3,:3])
 print (T03[:3,:3])
