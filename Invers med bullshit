@@ -1,1 +1,181 @@
+import numpy as np
+import sympy as sp
 
+# Længder på de forskellige dele af robotten
+L = {
+    'world': {'l': 90}, #længde fra basen til theta 1
+        'hop': {'l': 45}, #Længde fra theta 1 til theta 2
+        'base': {'l': 45}, #Vandret længde fra 1 til 2
+        'lower_arm': {'l': 95}, #Armens længde
+        'parallel_arm': {'l': 120, 's1': 30, 's2': 20}, #Hingen (måske slet, vi ik bruge)
+        'elbow': {'l': 18}, # Hop fra lower arm til upper arm
+        'upper_arm': {'l': 157},
+        'wrist': {'l': 75} # Længden fra theta 5 til midten af end effektor
+}
+
+# Vi begynder at udregne vores Theta værdier
+# Vi bruger vores desired position som er punktet vi gerne vil nå. Vores Matrice R er hele rotationen T06
+# R03 er rotationen af T03 og vores L er vores længder
+def geometric_inverse_kinematic(desired_position, R, R03, L):
+    x_end, y_end, z_end = desired_position
+    #For at udregne korrekt trækker vi vores wrist fra som et offset
+    point_offset = R @ np.array([0, 0, -L['wrist']['l']])
+    x = x_end + point_offset[0]
+    y = y_end + point_offset[1]
+    z = z_end + point_offset[2]
+
+    # Udregning af Theta1
+    theta1_rad = np.arctan2(y, x)
+    theta1_deg = np.degrees(theta1_rad)
+
+    # Links
+    L1 = L['lower_arm']['l']
+    L2 = L['upper_arm']['l']
+
+    # Udregn Theta 2
+    #Vi bruger trekants beregning og cosinus relationer til at udregne theta 2 ud fra trekanter
+    L0 = (x ** 2 + y ** 2) ** 0.5
+    a = L0 - L['base']['l']
+    b = z - (L['world']['l']+L['hop']['l'])
+    d = np.sqrt(a ** 2 + b ** 2)  # hypertenusen
+    theta2_rad = np.arccos((L1 ** 2 + d ** 2 - L2 ** 2) / (2 * L1 * d)) + np.arctan2(b, a)
+    theta2_deg = np.degrees(theta2_rad)
+
+    # Udregning af Theta 3
+    NyL2 = (L['elbow']['l'] ** 2 + L['upper_arm']['l'] ** 2) ** 0.5
+    C = np.clip((L['lower_arm']['l'] ** 2 + NyL2 ** 2 - d ** 2) / (2 * L['lower_arm']['l'] * NyL2), -1, 1)
+    Tre = 90 - np.degrees(np.arccos(L['elbow']['l'] / NyL2))
+    theta3_deg = np.degrees(np.arccos(C)) - Tre - 90
+    print(Tre, C)
+    """
+    #Udregning af Theta 4, 5 og 6 med roll, pitch og yaw
+    roll = 0        # Gamma
+    pitch = 0   # Beta
+    yaw = 0    # Alpha
+
+
+    Rz = np.array([
+        [np.cos(yaw), -np.sin(yaw), 0],
+        [np.sin(yaw), np.cos(yaw), 0],
+        [0, 0, 1]
+    ])
+
+    Ry = np.array([
+        [np.cos(pitch), 0, np.sin(pitch)],
+        [0, 1, 0],
+        [-np.sin(pitch), 0, np.cos(pitch)]
+    ])
+
+    Rx = np.array([
+        [1, 0, 0],
+        [0, np.cos(roll), -np.sin(roll)],
+        [0, np.sin(roll), np.cos(roll)]
+    ])
+
+    R = Rz @ Ry @ Rx
+
+    #Opstilling af den totale transformations matrix.
+    def transformation_matrix(d, a, alpha, theta):
+        return np.array([
+            [np.cos(theta), -np.sin(theta), 0, a],
+            [np.sin(theta) * np.cos(alpha), np.cos(theta) * np.cos(alpha), -np.sin(alpha), np.sin(alpha) * d],
+            [np.sin(theta) * np.sin(alpha), np.cos(theta) * np.sin(alpha), np.cos(alpha), np.cos(alpha) * d],
+            [0, 0, 0, 1]
+        ])
+
+    #Vi bestemmer de tre første rækker af vores DH og ganger dem sammen
+    T01 = transformation_matrix(L['world']['l'] + L['hop']['l'], L['base']['l'], 0, theta1_rad)
+    T12 = transformation_matrix(L['lower_arm']['l'], 0, -np.pi / 2, theta2_rad)
+    T23 = transformation_matrix(L['upper_arm']['l'], 0, 0, theta3_rad)
+
+    T03 = T01 @ T12 @ T23
+
+    T03Rot = np.array ([
+        [T03[0, 0], T03[0, 1], T03[0, 2]],
+        [T03[1, 0], T03[1,1], T03[1,2]],
+        [T03[2,0], T03[2,1], T03[2,2]]
+    ])
+
+    # Vi bestemmer vores transformation for alle vores DH parametere og fjerner T03 så vi kune har T36W tilbage
+    T06W = np.linalg.multi_dot([transformation_matrix(d['d'],d['a'], d['alpha'],d['theta']) for d in dh_params])
+
+    T06Rot = np.array([
+        [T06W[0, 0], T06W[0, 1], T06W[0, 2]],
+        [T06W[1, 0], T06W[1, 1], T06W[1, 2]],
+        [T06W[2, 0], T06W[2, 1], T06W[2, 2]]
+    ])
+
+    Rot01 = T06Rot @ R
+    RotMax = np.linalg.inv(T03Rot) @ Rot01
+
+    #Vi udregner vores roll, pitch og yaw
+    Beta = np.arctan2(-RotMax[2, 0], np.sqrt(RotMax[0, 0]**2+RotMax[1, 0]**2))
+    Alpha = np.arctan2(RotMax[0, 1]/np.cos(Beta), (RotMax[0, 0]/np.cos(Beta)))
+    Gamma = np.arctan2(RotMax[1, 2]/np.cos(Beta), (RotMax[2, 2]/np.cos(Beta)))
+
+    print ("Beta:", np.degrees(Beta))
+    print ("Alpha:", np.degrees(Alpha))
+    print ("Gamma:", np.degrees(Gamma))
+    # theta5_rad_1 = np.arccos(RotMax[1][2])
+    # theta5_rad_2 = -theta5_rad_1  # Spejlvendt løsning
+    """
+
+    # Udregning af theta 4, 5 og 6 - begge løsninger
+    #Invers af T03 ganget med R for at få rotationen af T36
+    RotMax = np.linalg.inv(R03) @ R
+
+    # Vi tager indgangene fra vores matrix og løser ligningerne i indgangene
+    theta5sin = np.sqrt(RotMax[1, 0] ** 2 + RotMax[1, 1] ** 2)
+    theta5_rad_1 = np.arctan2(theta5sin, -RotMax[1, 2])
+    theta5_rad_2 = 0 # Vi opretter denne da der er flere løsninger til 4 og 6
+    # Første løsning
+    if (abs(theta5_rad_1) > 1e-3): # For at undgå fejl med fortegn bruger vi abs
+        theta4_rad_1 = np.arctan2(RotMax[2][2], RotMax[0][2])
+        theta6_rad_1 = np.arctan2(-RotMax[1][1], RotMax[1][0])
+    else:  # singularitet
+        theta4_rad_1 = 0
+        theta6_rad_1 = np.arctan2(RotMax[2][0], RotMax[2][1])
+
+    # Anden løsning hvor vi bruger rad_2 istedet for rad_1
+    theta4_rad_2 = np.arctan2(RotMax[0][2] * -np.sin(theta5_rad_2), -RotMax[2][2] * np.sin(theta5_rad_2))
+    theta6_rad_2 = np.arctan2(-RotMax[1][0] * np.sin(theta5_rad_2), RotMax[1][1] * np.sin(theta5_rad_2))
+
+    # Konvertering til grader
+    theta4_deg_1 = np.degrees(theta4_rad_1)
+    theta5_deg_1 = np.degrees(theta5_rad_1)
+    theta6_deg_1 = np.degrees(theta6_rad_1)
+
+    theta4_deg_2 = np.degrees(theta4_rad_2)
+    theta5_deg_2 = np.degrees(theta5_rad_2)
+    theta6_deg_2 = np.degrees(theta6_rad_2)
+
+    return (float(theta1_deg), float(theta2_deg), float(theta3_deg),
+            (float(theta4_deg_1), float(theta4_deg_2)),
+            (float(theta5_deg_1), float(theta5_deg_2)),
+            (float(theta6_deg_1), float(theta6_deg_2)))
+
+
+# Vores desired position ud fra x, y, z og rotations matricerne vi har fået fra Forward Kinematik
+desired_position = [242.25379948,  85.62590328,  -1.54870132]
+
+#T06 rotationen
+R = np.array([[-0.75387136,  0.39782668,  0.52288804],
+             [ 0.39653278,  0.91005231, -0.12069195],
+             [-0.52386995,  0.11635604, -0.84381369]]);
+#T03 rotationen
+R03 = np.array([[ 7.68592593e-01, -4.80269956e-01,  4.22618262e-01],
+               [ 3.58400612e-01, -2.23953558e-01, -9.06307787e-01],
+               [ 5.29919264e-01,  8.48048096e-01,  6.12323400e-17]]);
+
+
+# Udregning af inverse kinematik
+theta1_deg, theta2_deg, theta3_deg, theta4_deg, theta5_deg, theta6_deg = geometric_inverse_kinematic(desired_position, R, R03, L)
+
+# Print for theta værdierne
+print("Theta values for Inverse Kinematic:")
+print("Theta1 in Degrees:", theta1_deg)
+print("Theta2 in Degrees:", theta2_deg)
+print("Theta3 in Degrees:", theta3_deg)
+print("Theta4 in Degrees: ", theta4_deg)
+print("Theta5 in Degrees:", theta5_deg)
+print("Theta6 in Degrees:", theta6_deg)
