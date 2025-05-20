@@ -26,100 +26,100 @@ constexpr int theta[NUM_THETAS][NUM_SERVOS] = { // 2d array to store all of the 
 
 constexpr int Outside_dispenser[NUM_DISPENSERS][NUM_SERVOS] = { 
   { // Position outside dispenser 1 (Paracetamol) 
-    abs(theta[0][0] + offset[0]), 
-    abs(theta[0][1] + offset[1]),  
-    abs(theta[0][2] + offset[2]), 
-    abs(theta[0][3] + offset[3]), 
-    abs(theta[0][4] + offset[4]), 
-    abs(theta[0][5] + offset[5])
+    (theta[0][0] + offset[0]), 
+    (theta[0][1] + offset[1]),  
+    (theta[0][2] + offset[2]), 
+    (theta[0][3] + offset[3]), 
+    (theta[0][4] + offset[4]), 
+    (theta[0][5] + offset[5])
   }, 
 
   { // Position outside dispenser 2 (Lamotrigin) 
-    abs(theta[1][0] + offset[0]), 
-    abs(theta[1][1] + offset[1]), 
-    abs(theta[1][2] + offset[2]), 
-    abs(theta[1][3] + offset[3]),
-    abs(theta[1][4] + offset[4]), 
-    abs(theta[1][5] + offset[5])
+    (theta[1][0] + offset[0]), 
+    (theta[1][1] + offset[1]), 
+    (theta[1][2] + offset[2]), 
+    (theta[1][3] + offset[3]),
+    (theta[1][4] + offset[4]), 
+    (theta[1][5] + offset[5])
   }
 };
 
 constexpr int Pressed_dispenser[NUM_DISPENSERS][NUM_SERVOS] = {
   { // Dispenser 1 pressed (paracetamol) 
-    abs(theta[2][0] + offset[0]), 
-    abs(theta[2][1] + offset[1]), 
-    abs(theta[2][2] + offset[2]), 
-    abs(theta[2][3] + offset[3]), 
-    abs(theta[2][4] + offset[4]), 
-    abs(theta[2][5] + offset[5]), 
+    (theta[2][0] + offset[0]), 
+    (theta[2][1] + offset[1]), 
+    (theta[2][2] + offset[2]), 
+    (theta[2][3] + offset[3]), 
+    (theta[2][4] + offset[4]), 
+    (theta[2][5] + offset[5]), 
   }, 
 
   { // Dispenser 2 pressed (Lamotrigin)
-    abs(theta[3][0] + offset[0]), 
-    abs(theta[3][1] + offset[1]), 
-    abs(theta[3][2] + offset[2]), 
-    abs(theta[3][3] + offset[3]), 
-    abs(theta[3][4] + offset[4]), 
-    abs(theta[3][5] + offset[5]), 
+    (theta[3][0] + offset[0]), 
+    (theta[3][1] + offset[1]), 
+    (theta[3][2] + offset[2]), 
+    (theta[3][3] + offset[3]), 
+    (theta[3][4] + offset[4]), 
+    (theta[3][5] + offset[5]), 
   }  
 };
 
 // Define load positions for Monday, Tuesday, and Wednesday
 constexpr int loadPositions[NUM_POSITIONS][NUM_SERVOS] = {
   { // Monday's loading position
-    abs(theta[4][0] + offset[0]), 
-    abs(theta[4][1] + offset[1]), 
-    abs(theta[4][2] + offset[2]), 
-    abs(theta[4][3] + offset[3]), 
-    abs(theta[4][4] + offset[4]), 
-    abs(theta[4][5] + offset[5])
+    (theta[4][0] + offset[0]), 
+    (theta[4][1] + offset[1]), 
+    (theta[4][2] + offset[2]), 
+    (theta[4][3] + offset[3]), 
+    (theta[4][4] + offset[4]), 
+    (theta[4][5] + offset[5])
   }, 
 
   { // Tuesday's loading position
-    abs(theta[5][0] + offset[0]), 
-    abs(theta[5][1] + offset[1]), 
-    abs(theta[5][2] + offset[2]), 
-    abs(theta[5][3] + offset[3]), 
-    abs(theta[5][4] + offset[4]), 
-    abs(theta[5][5] + offset[5])
+    (theta[5][0] + offset[0]), 
+    (theta[5][1] + offset[1]), 
+    (theta[5][2] + offset[2]), 
+    (theta[5][3] + offset[3]), 
+    (theta[5][4] + offset[4]), 
+    (theta[5][5] + offset[5])
   }, 
 
   { // Wednesday's loading position
-    abs(theta[6][0] + offset[0]), 
-    abs(theta[6][1] + offset[1]), 
-    abs(theta[6][2] + offset[2]), 
-    abs(theta[6][3] + offset[3]), 
-    abs(theta[6][4] + offset[4]), 
-    abs(theta[6][5] + offset[5])
+    (theta[6][0] + offset[0]), 
+    (theta[6][1] + offset[1]), 
+    (theta[6][2] + offset[2]), 
+    (theta[6][3] + offset[3]), 
+    (theta[6][4] + offset[4]), 
+    (theta[6][5] + offset[5])
   }, 
 };
 
 constexpr int loadPosTurned[NUM_POSITIONS][NUM_SERVOS] = {
   { // Monday's loading position turned
-    abs(theta[7][0] + offset[0]), 
-    abs(theta[7][1] + offset[1]), 
-    abs(theta[7][2] + offset[2]), 
-    abs(theta[7][3] + offset[3]), 
-    abs(theta[7][4] + offset[4]), 
-    abs(theta[7][5] + offset[5])
+    (theta[7][0] + offset[0]), 
+    (theta[7][1] + offset[1]), 
+    (theta[7][2] + offset[2]), 
+    (theta[7][3] + offset[3]), 
+    (theta[7][4] + offset[4]), 
+    (theta[7][5] + offset[5])
   }, 
 
   { // Tuesday's loading position turned
-    abs(theta[8][0] + offset[0]), 
-    abs(theta[8][1] + offset[1]), 
-    abs(theta[8][2] + offset[2]), 
-    abs(theta[8][3] + offset[3]), 
-    abs(theta[8][4] + offset[4]), 
-    abs(theta[8][5] + offset[5])
+    (theta[8][0] + offset[0]), 
+    (theta[8][1] + offset[1]), 
+    (theta[8][2] + offset[2]), 
+    (theta[8][3] + offset[3]), 
+    (theta[8][4] + offset[4]), 
+    (theta[8][5] + offset[5])
   }, 
 
   { // Wednesday's loading position turned
-    abs(theta[9][0] + offset[0]), 
-    abs(theta[9][1] + offset[1]), 
-    abs(theta[9][2] + offset[2]), 
-    abs(theta[9][3] + offset[3]), 
-    abs(theta[9][4] + offset[4]), 
-    abs(theta[9][5] + offset[5])
+    (theta[9][0] + offset[0]), 
+    (theta[9][1] + offset[1]), 
+    (theta[9][2] + offset[2]), 
+    (theta[9][3] + offset[3]), 
+    (theta[9][4] + offset[4]), 
+    (theta[9][5] + offset[5])
   }, 
 };
 
