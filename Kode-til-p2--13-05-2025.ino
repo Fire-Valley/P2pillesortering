@@ -9,14 +9,14 @@ constexpr int NUM_THETAS = 10;  // Number of theta-sets
 constexpr int NUM_POSITIONS = 3;   // Number of loading positions (the days for the pill storage)
 
 constexpr int offset[NUM_SERVOS] = {10, 10+90, 63, 0, -10, -20}; // Array to store the servo offsets 
-constexpr int Startpos[NUM_SERVOS] = {90, -80, 0, 80, 107, 120}; // array to find the start position 
+constexpr int Startpos[NUM_SERVOS] = {90, -80, 90, 80, 107, 120}; // array to find the start position 
 
 constexpr int theta[NUM_THETAS][NUM_SERVOS] = { // 2d array to store all of the thetas without the offsets. 
-  {113, -80, 0, 80, 107, 120},  //Thetaset_1 (outside dispenser 1)
-  {70, 0, 0, 80, 107, 120},  //Thetaset_2 (outside dispenser 2)
-  {113, 0, 0, 80, 107, 120},  //Thetaset_3 (dispenser pressed 1)
-  {70, 0, 0, 80, 107, 120},  //Thetaset_4 (dispenser pressed 2)
-  {25, 32, 0, 105, 20, 20},  //Thetaset_5 (position monday)
+  {113, -80, 90, 80, 107, 120},  //Thetaset_1 (outside dispenser 1)
+  {70, -80, 90, 80, 107, 120},  //Thetaset_2 (outside dispenser 2)
+  {113, 0, 90, 80, 107, 120},  //Thetaset_3 (dispenser pressed 1)
+  {70, 0, 90, 80, 107, 120},  //Thetaset_4 (dispenser pressed 2)
+  {25, 32, 0, 105, 20, 120},  //Thetaset_5 (position monday)
   {12, 18, 0, 90, 20, 120},  //Thetaset_6 (position tuesday)
   {5, 5, 0, 80, 20, 120},  //Thetaset_7 (position wednesday)
   {25, 32, 0, 105, 20, 20},  //Thetaset_8 (position monday turned)
