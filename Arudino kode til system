@@ -1,0 +1,130 @@
+#include <Servo.h>
+
+const int NUM_SERVOS = 6;
+Servo servos[NUM_SERVOS];
+int currentPositions[NUM_SERVOS] = {0, 0, 0, 0, 0, 0};
+
+const int servoPins[NUM_SERVOS] = {13, 11, 12, 10, 9, 8};
+const int offset[NUM_SERVOS] = {10, 100, 63, 0, -10, -20};
+
+const int theta[10][NUM_SERVOS] = {
+  {113, -80, 95, 80, 107, 120}, // Outside dispenser 1
+  {70, -80, 95, 80, 107, 120},  // Outside dispenser 2
+  {113, 0, 95, 80, 107, 120},   // Pressed dispenser 1
+  {70, 0, 95, 80, 107, 120},    // Pressed dispenser 2
+  {25, 32, 0, 105, 20, 120},    // Monday
+  {12, 18, 0, 90, 20, 120},     // Tuesday
+  {4, 15, 5, 80, 20, 120},       // Wednesday
+  {25, 32, 0, 105, 20, 20},     // Monday turned
+  {12, 18, 0, 90, 20, 20},      // Tuesday turned
+  {4, 15, 5, 80, 20, 20}         // Wednesday turned
+};
+
+enum MedicineType { Panodil, Lamotrigin };
+
+struct Medicine {
+  MedicineType type;
+  int quantity;
+  int dispenser;
+  int loadPos;
+};
+
+const Medicine weekPlan[3][2] = {
+  { {Panodil, 2, 0, 0}, {Lamotrigin, 2, 1, 0} },
+  { {Panodil, 2, 0, 1}, {Lamotrigin, 2, 1, 1} },
+  { {Panodil, 2, 0, 2}, {Lamotrigin, 2, 1, 2} }
+};
+
+// ---------- HJÆLPEFUNKTIONER ----------
+
+void applyOffset(const int base[NUM_SERVOS], int result[NUM_SERVOS]) {
+  for (int i = 0; i < NUM_SERVOS; i++) {
+    result[i] = base[i] + offset[i];
+  }
+}
+
+void moveToPosition(const int target[NUM_SERVOS]) {
+  bool reached = false;
+  while (!reached) {
+    reached = true;
+    for (int i = 0; i < NUM_SERVOS; i++) {
+      if (currentPositions[i] < target[i]) {
+        currentPositions[i]++;
+        reached = false;
+      } else if (currentPositions[i] > target[i]) {
+        currentPositions[i]--;
+        reached = false;
+      }
+      servos[i].write(currentPositions[i]);
+    }
+    delay(15); // smooth movement
+  }
+}
+
+// ---------- PRÆDEFINEREDE BEVÆGELSER ----------
+
+void Outsidedispenser(int index) {
+  int pos[NUM_SERVOS];
+  applyOffset(theta[index], pos); // index 0 or 1
+  moveToPosition(pos);
+}
+
+void Presseddispenser(int index) {
+  int pos[NUM_SERVOS];
+  applyOffset(theta[index + 2], pos); // index 2 or 3
+  moveToPosition(pos);
+}
+
+void loadAtPosition(int dayIndex) {
+  int pos[NUM_SERVOS];
+  applyOffset(theta[4 + dayIndex], pos); // index 4 to 6
+  moveToPosition(pos);
+}
+
+void loadAtDifferentPosition(int dayIndex) {
+  int pos[NUM_SERVOS];
+  applyOffset(theta[7 + dayIndex], pos); // index 7 to 9
+  moveToPosition(pos);
+}
+
+void Dispensera(int dispenserIndex, int times) {
+  for (int i = 0; i < times; i++) {
+    Outsidedispenser(dispenserIndex);
+    delay(1000);
+    Presseddispenser(dispenserIndex);
+    delay(1000);
+    Outsidedispenser(dispenserIndex);
+    delay(1000);
+  }
+}
+
+// ---------- ARDUINO STANDARD ----------
+
+void setup() {
+  for (int i = 0; i < NUM_SERVOS; i++) {
+    servos[i].attach(servoPins[i]);
+  }
+  int startWithOffset[NUM_SERVOS];
+  applyOffset(theta[0], startWithOffset); // use first position as base
+  moveToPosition(startWithOffset);
+}
+
+void executePlan() {
+  for (int day = 0; day < 3; day++) {
+    for (int med = 0; med < 2; med++) {
+      const Medicine& m = weekPlan[day][med];
+      if (m.quantity > 0) {
+        Dispensera(m.dispenser, m.quantity);
+        delay(1000);
+        loadAtPosition(m.loadPos);
+        loadAtDifferentPosition(m.loadPos);
+        delay(2000);
+      }
+    }
+  }
+}
+
+void loop() {
+  executePlan();
+  delay(100000); // Run once per boot cycle
+}
